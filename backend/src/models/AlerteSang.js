@@ -41,7 +41,9 @@ const AlerteSang = sequelize.define('AlerteSang', {
   },
   latitude:  { type: DataTypes.FLOAT, allowNull: true },
   longitude: { type: DataTypes.FLOAT, allowNull: true },
-  rayon_km:  { type: DataTypes.INTEGER, allowNull: true },
+  rayon_km:   { type: DataTypes.INTEGER, allowNull: true },
+  duree_heures: { type: DataTypes.INTEGER, allowNull: true, comment: 'Durée de validité en heures (null = illimitée)' },
+  expire_at:  { type: DataTypes.DATE, allowNull: true, comment: 'Date/heure d\'expiration automatique' },
 }, {
   tableName: 'alertes_sang',
   timestamps: true,

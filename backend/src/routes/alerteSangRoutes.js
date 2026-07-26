@@ -17,7 +17,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 // ── Admin hôpital : créer une alerte ─────────────────────────
 router.post('/', authenticate, authorize('admin_hopital'), async (req, res) => {
   try {
-    const { groupe_sang, quantite, message, urgence, latitude, longitude, rayon_km } = req.body;
+    const { groupe_sang, quantite, message, urgence, latitude, longitude, rayon_km, duree_heures } = req.body;
     if (!groupe_sang) return res.status(400).json({ message: 'Groupe sanguin requis.' });
 
     const profil = await AdminHopital.findOne({ where: { user_id: req.user.id } });
@@ -25,19 +25,25 @@ router.post('/', authenticate, authorize('admin_hopital'), async (req, res) => {
 
     const groupes_donneurs = AlerteSang.COMPAT[groupe_sang] || [];
 
+    const expire_at = duree_heures
+      ? new Date(Date.now() + duree_heures * 3_600_000)
+      : null;
+
     const alerte = await AlerteSang.create({
       hopital_id:      profil.hopital_id,
       hopital_nom:     profil.hopital_nom,
       admin_id:        req.user.id,
       groupe_sang,
       groupes_donneurs,
-      quantite:  quantite  || null,
-      message:   message   || null,
-      urgence:   urgence   || 'Urgent',
-      statut:    'active',
-      latitude:  latitude  || null,
-      longitude: longitude || null,
-      rayon_km:  rayon_km  || null,
+      quantite:      quantite      || null,
+      message:       message       || null,
+      urgence:       urgence       || 'Urgent',
+      statut:        'active',
+      latitude:      latitude      || null,
+      longitude:     longitude     || null,
+      rayon_km:      rayon_km      || null,
+      duree_heures:  duree_heures  || null,
+      expire_at,
     });
 
     res.status(201).json(alerte);
@@ -77,8 +83,12 @@ router.get('/patient', authenticate, async (req, res) => {
     const patLat = patient?.latitude;
     const patLon = patient?.longitude;
 
+    const now = new Date();
     const alertes = await AlerteSang.findAll({
-      where: { statut: 'active' },
+      where: {
+        statut: 'active',
+        [Op.or]: [{ expire_at: null }, { expire_at: { [Op.gt]: now } }],
+      },
       include: [{ model: Hopital, as: 'hopital', attributes: ['telephone', 'adresse', 'ville'] }],
       order: [['created_at', 'DESC']],
     });
@@ -131,8 +141,12 @@ router.get('/donneur', authenticate, authorize('donneur'), async (req, res) => {
 
     if (!groupe) return res.json([]);
 
+    const now2 = new Date();
     let alertes = await AlerteSang.findAll({
-      where: { statut: 'active' },
+      where: {
+        statut: 'active',
+        [Op.or]: [{ expire_at: null }, { expire_at: { [Op.gt]: now2 } }],
+      },
       include: [{ model: Hopital, as: 'hopital', attributes: ['telephone', 'adresse', 'ville'] }],
       order: [['created_at', 'DESC']],
     });

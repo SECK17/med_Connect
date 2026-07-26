@@ -285,7 +285,10 @@ export default function DonneurDonSang() {
           </div>
           <div className="divide-y divide-gray-50">
             {historique.map((r, i) => {
-              const statutCfg = r.statut === "active"
+              const estExpiree = r.expire_at && new Date(r.expire_at) < Date.now();
+              const statutCfg = (r.statut === "active" && estExpiree)
+                ? { cls: "bg-amber-100 text-amber-700", label: "Expirée" }
+                : r.statut === "active"
                 ? { cls: "bg-green-100 text-green-700", label: "Active" }
                 : r.statut === "terminee"
                 ? { cls: "bg-gray-100 text-gray-500",  label: "Terminée" }

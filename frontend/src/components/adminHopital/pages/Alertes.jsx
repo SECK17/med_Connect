@@ -10,6 +10,24 @@ const RAYONS   = [
   { val: 10,   label: "10 km" },
   { val: 15,   label: "15 km" },
 ];
+const DUREES = [
+  { val: null, label: "Illimitée" },
+  { val: 24,   label: "24 heures" },
+  { val: 48,   label: "48 heures" },
+  { val: 72,   label: "72 heures" },
+  { val: 168,  label: "1 semaine" },
+];
+
+function tempsRestant(expire_at) {
+  if (!expire_at) return null;
+  const diff = new Date(expire_at) - Date.now();
+  if (diff <= 0) return { label: "Expirée", expired: true };
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor((diff % 3_600_000) / 60_000);
+  if (h >= 24) return { label: `Expire dans ${Math.floor(h / 24)}j ${h % 24}h`, expired: false };
+  if (h > 0)   return { label: `Expire dans ${h}h ${m}min`, expired: false };
+  return { label: `Expire dans ${m} min`, expired: false };
+}
 
 const URGENCE_CFG = {
   Critique: { bg: "bg-red-100",    text: "text-red-700",    border: "border-red-200"    },
@@ -21,6 +39,7 @@ const STATUT_CFG = {
   active:   { bg: "bg-emerald-100", text: "text-emerald-700", label: "Active"   },
   terminee: { bg: "bg-gray-100",    text: "text-gray-500",    label: "Terminée" },
   annulee:  { bg: "bg-red-100",     text: "text-red-600",     label: "Annulée"  },
+  expiree:  { bg: "bg-amber-100",   text: "text-amber-700",   label: "Expirée"  },
 };
 
 const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100";
@@ -50,6 +69,7 @@ export default function AdminHopitalAlertes() {
     message: "",
     urgence: "Urgent",
     rayon_km: null,
+    duree_heures: 72,
     latitude: null,
     longitude: null,
   });
@@ -99,7 +119,7 @@ export default function AdminHopitalAlertes() {
       if (res.ok) {
         load();
         setShowForm(false);
-        setForm({ groupe_sang: "O+", quantite: "", message: "", urgence: "Urgent", rayon_km: null, latitude: null, longitude: null });
+        setForm({ groupe_sang: "O+", quantite: "", message: "", urgence: "Urgent", rayon_km: null, duree_heures: 72, latitude: null, longitude: null });
         setGpsStatus(null);
       }
     } finally { setSaving(false); }
@@ -159,8 +179,10 @@ export default function AdminHopitalAlertes() {
 
       <div className="space-y-3">
         {alertes.map((a, i) => {
-          const ucfg = URGENCE_CFG[a.urgence] || URGENCE_CFG.Moyen;
-          const scfg = STATUT_CFG[a.statut]   || STATUT_CFG.active;
+          const ucfg   = URGENCE_CFG[a.urgence] || URGENCE_CFG.Moyen;
+          const expiry = tempsRestant(a.expire_at);
+          const statutEffectif = (a.statut === "active" && expiry?.expired) ? "expiree" : a.statut;
+          const scfg   = STATUT_CFG[statutEffectif] || STATUT_CFG.active;
           return (
             <motion.div key={a.id}
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -189,6 +211,11 @@ export default function AdminHopitalAlertes() {
                         <Navigation size={10} /> Zone {a.rayon_km} km
                       </span>
                     )}
+                    {expiry && (
+                      <span className={`text-[11px] font-semibold ${expiry.expired ? "text-amber-600" : "text-gray-400"}`}>
+                        {expiry.label}
+                      </span>
+                    )}
                     {/* Compteur réponses — cliquable */}
                     <button
                       onClick={() => voirReponses(a)}
@@ -204,7 +231,7 @@ export default function AdminHopitalAlertes() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  {a.statut === "active" && (
+                  {a.statut === "active" && !expiry?.expired && (
                     <button onClick={() => changeStatut(a.id, "terminee")}
                       className="flex items-center gap-1 text-[11px] text-emerald-600 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors">
                       <CheckCircle2 size={11} /> Terminer
@@ -416,6 +443,27 @@ export default function AdminHopitalAlertes() {
                       </button>
                     )}
                   </div>
+                </div>
+
+                {/* Durée de validité */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Durée de validité</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {DUREES.map(d => (
+                      <button key={d.label} onClick={() => setForm(f => ({ ...f, duree_heures: d.val }))}
+                        className={`py-2 px-3 rounded-lg text-[12px] font-semibold border transition-all ${
+                          form.duree_heures === d.val
+                            ? "bg-rose-600 text-white border-rose-600"
+                            : "bg-gray-50 text-gray-700 border-gray-200 hover:border-rose-300"
+                        }`}
+                      >{d.label}</button>
+                    ))}
+                  </div>
+                  {form.duree_heures && (
+                    <p className="mt-1.5 text-[11px] text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5">
+                      Cette alerte expirera automatiquement après {DUREES.find(d => d.val === form.duree_heures)?.label}.
+                    </p>
+                  )}
                 </div>
 
                 {/* Quantité */}

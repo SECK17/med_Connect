@@ -43,17 +43,18 @@ export default function Profil() {
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
+          const local = JSON.parse(localStorage.getItem("medconnect_profile") || "{}");
           const merged = {
-            name:         data.nom || "",
-            email:        data.email || "",
-            phone:        data.telephone || "",
-            address:      data.profil_patient?.adresse || "",
-            dob:          data.profil_patient?.dateNaissance || "",
-            bloodGroup:   data.profil_patient?.groupeSanguin || "",
-            allergies:    [],
-            antecedents:  [],
-            treatments:   [],
-            vaccinations: [],
+            name:         data.nom        || "",
+            email:        data.email      || "",
+            phone:        data.telephone  || "",
+            address:      data.profil_patient?.adresse        || "",
+            dob:          data.profil_patient?.dateNaissance   || "",
+            bloodGroup:   data.profil_patient?.groupeSanguin   || "",
+            allergies:    data.profil_patient?.allergies    ?? (local.allergies    || []),
+            antecedents:  data.profil_patient?.antecedents  ?? (local.antecedents  || []),
+            treatments:   data.profil_patient?.traitements  ?? (local.treatments   || []),
+            vaccinations: data.profil_patient?.vaccinations ?? (local.vaccinations || []),
           };
           localStorage.setItem("medconnect_profile", JSON.stringify(merged));
           setProfile(merged);
@@ -75,7 +76,16 @@ export default function Profil() {
       fetch(`http://localhost:5000/api/patients/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ adresse: draft.address, dateNaissance: draft.dob, groupeSanguin: draft.bloodGroup }),
+        body: JSON.stringify({
+          adresse:       draft.address,
+          dateNaissance: draft.dob,
+          groupeSanguin: draft.bloodGroup,
+          telephone:     draft.phone,
+          allergies:     draft.allergies,
+          antecedents:   draft.antecedents,
+          traitements:   draft.treatments,
+          vaccinations:  draft.vaccinations,
+        }),
       }).catch(() => {});
     }
 
