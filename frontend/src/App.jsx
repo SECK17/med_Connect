@@ -172,6 +172,7 @@ export default function App() {
           <Route index           element={<Navigate to="accueil" replace />} />
           <Route path="accueil"  element={<DonneurAccueil />} />
           <Route path="don-sang" element={<DonneurDonSang />} />
+          <Route path="acces"    element={<JournalAcces />} />
           <Route path="profil"   element={<DonneurProfil />} />
           <Route path="*"        element={<NotFound />} />
         </Route>

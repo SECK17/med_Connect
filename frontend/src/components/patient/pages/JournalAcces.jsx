@@ -1,4 +1,4 @@
-// Page patient : « Qui a accédé à mon dossier ? »
+// Page « Qui a accédé à mon dossier ? » — espaces patient et donneur.
 // Affiche le journal d'accès (GET /api/journal/patient/:id), page par page.
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "motion/react";

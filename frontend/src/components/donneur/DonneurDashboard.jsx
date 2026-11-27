@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { deconnexion } from "../../auth.js";
 import {
   LayoutDashboard, Droplets, User, LogOut,
-  Menu, X, Heart, Bell, CheckCircle2,
+  Menu, X, Heart, Bell, CheckCircle2, ShieldCheck,
 } from "lucide-react";
 
 const NAV = [
   { to: "accueil",  icon: LayoutDashboard, label: "Tableau de bord" },
   { to: "don-sang", icon: Droplets,        label: "Don de sang"     },
+  { to: "acces",    icon: ShieldCheck,     label: "Accès au dossier" },
   { to: "profil",   icon: User,            label: "Mon profil"      },
 ];
 
