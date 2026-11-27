@@ -9,13 +9,30 @@ export default function Login() {
   const [error, setError]   = useState("");
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [nonVerifie, setNonVerifie] = useState(false);
+  const [renvoi, setRenvoi]   = useState(""); // message après renvoi du lien
   const navigate = useNavigate();
+
+  const renvoyerLien = async () => {
+    setRenvoi("");
+    try {
+      const res = await fetch(`${API_URL}/api/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email }),
+      });
+      const data = await res.json();
+      setRenvoi(data.message || "Lien renvoyé.");
+    } catch {
+      setRenvoi("Impossible de renvoyer le lien pour le moment.");
+    }
+  };
 
   const set = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); setPending(false); setLoading(true);
+    setError(""); setPending(false); setNonVerifie(false); setRenvoi(""); setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
@@ -23,7 +40,10 @@ export default function Login() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) {
+        if (data.code === "EMAIL_NON_VERIFIE") setNonVerifie(true);
+        throw new Error(data.message);
+      }
 
       sessionStorage.setItem("token",  data.token);
       sessionStorage.setItem("role",   data.user.role);
@@ -113,12 +133,12 @@ export default function Login() {
             <motion.div
               initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
               className={`flex items-start gap-3 px-4 py-3 rounded-xl mb-6 text-[13px] border ${
-                pending
+                pending || nonVerifie
                   ? "bg-amber-50 border-amber-200 text-amber-800"
                   : "bg-red-50 border-red-200 text-red-700"
               }`}
             >
-              {pending
+              {pending || nonVerifie
                 ? <Clock size={15} className="flex-shrink-0 mt-0.5" />
                 : <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
               }
@@ -127,6 +147,18 @@ export default function Login() {
                 {pending && (
                   <div className="mt-1 text-amber-700">
                     Vous serez notifié une fois votre compte validé par l'administrateur.
+                  </div>
+                )}
+                {nonVerifie && (
+                  <div className="mt-1 text-amber-700">
+                    {renvoi || (
+                      <>
+                        Vous n'avez pas reçu l'email ?{" "}
+                        <button type="button" onClick={renvoyerLien} className="font-semibold underline hover:text-amber-900">
+                          Renvoyer le lien
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -155,6 +187,11 @@ export default function Login() {
                   placeholder="••••••••" required
                   className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-[14px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-blue-50/50 focus:bg-white transition-colors"
                 />
+              </div>
+              <div className="text-right mt-1.5">
+                <Link to="/forgot-password" className="text-[12px] text-blue-600 hover:text-blue-700 font-medium">
+                  Mot de passe oublié ?
+                </Link>
               </div>
             </div>
 

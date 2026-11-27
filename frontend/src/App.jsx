@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/auth/Login.jsx";
 import Register from "./components/auth/Register.jsx";
 import CreateAdmin from "./components/auth/CreateAdmin.jsx";
+import ForgotPassword from "./components/auth/ForgotPassword.jsx";
+import ResetPassword from "./components/auth/ResetPassword.jsx";
+import VerifyEmail from "./components/auth/VerifyEmail.jsx";
 import AdminDashboard from "./components/admin/AdminDashboard.jsx";
 import MedecinLayout from "./components/medecin/MedecinDashboard.jsx";
 import PatientLayout from "./components/patient/PatientDashboard.jsx";
@@ -14,6 +17,7 @@ import Hopitaux from "./components/patient/pages/Hopitaux.jsx";
 import DonSang from "./components/patient/pages/DonSang.jsx";
 import Alertes from "./components/patient/pages/Alertes.jsx";
 import Profil from "./components/patient/pages/Profil.jsx";
+import JournalAcces from "./components/patient/pages/JournalAcces.jsx";
 import MedecinAccueil from "./components/medecin/pages/Accueil.jsx";
 import DemandesRDV from "./components/medecin/pages/DemandesRDV.jsx";
 import MedecinRendezVous    from "./components/medecin/pages/RendezVous.jsx";
@@ -99,6 +103,9 @@ export default function App() {
         <Route path="/login"        element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register"     element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/create-admin" element={<CreateAdmin />} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/reset-password"  element={<PublicRoute><ResetPassword /></PublicRoute>} />
+        <Route path="/verify-email"    element={<VerifyEmail />} />
         <Route path="/"             element={<PublicRoute><Navigate to="/login" replace /></PublicRoute>} />
 
         {/* ── Redirection automatique post-login ── */}
@@ -127,6 +134,7 @@ export default function App() {
           <Route path="alertes"         element={<Alertes />} />
           <Route path="messages"         element={<PatientChat />} />
           <Route path="profil"          element={<Profil />} />
+          <Route path="acces"           element={<JournalAcces />} />
           <Route path="*"               element={<NotFound />} />
         </Route>
 

@@ -64,14 +64,9 @@ export default function Register() {
       const text = await res.text();
       if (!res.ok) { const d = text ? JSON.parse(text) : {}; throw new Error(d.message || "Inscription échouée"); }
       if (!text) throw new Error("Réponse serveur vide");
-      const data = JSON.parse(text);
-      if (role === "medecin") { setStep(2); return; }
-      sessionStorage.setItem("token",  data.token);
-      sessionStorage.setItem("role",   data.user.role);
-      sessionStorage.setItem("nom",    data.user.nom);
-      sessionStorage.setItem("email",  data.user.email);
-      sessionStorage.setItem("userId", data.user.id);
-      navigate(data.user.role === "donneur" ? "/dashboard/donneur/don-sang" : "/dashboard/patient/accueil");
+      JSON.parse(text);
+      // Pas de connexion automatique : l'utilisateur doit d'abord confirmer son email
+      setStep(2);
     } catch (err) {
       setError(err.message || "Erreur lors de l'inscription");
     } finally {
@@ -92,9 +87,11 @@ export default function Register() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">Compte créé !</h2>
           <p className="text-gray-500 text-[14px] leading-relaxed mb-8">
-            {role === "medecin"
-              ? "Votre compte médecin est en attente de validation par l'administrateur. Vous pourrez vous connecter une fois validé."
-              : `Votre compte ${ROLES.find(r => r.value === role)?.label} a été créé avec succès.`}
+            Un email de confirmation a été envoyé à <strong className="text-gray-700">{form.email}</strong>.
+            Cliquez sur le lien qu'il contient pour activer votre compte.
+            {role === "medecin" && (
+              <> Votre compte médecin devra ensuite être validé par l'administrateur.</>
+            )}
           </p>
           <button
             onClick={() => navigate("/login")}

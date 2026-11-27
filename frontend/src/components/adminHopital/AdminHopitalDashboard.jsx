@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { LayoutDashboard, Users, Bell, User, LogOut, Heart, Menu, X, Building2, Stethoscope, CalendarDays, UserRound, CheckCircle2 } from "lucide-react";
 import { API_URL } from "../../config.js";
 
+import { deconnexion } from "../../auth.js";
 const NAV = [
   { to: "accueil",     label: "Tableau de bord", icon: LayoutDashboard },
   { to: "rendezvous",  label: "Rendez-vous",      icon: CalendarDays },
@@ -52,7 +53,7 @@ export default function AdminHopitalDashboard() {
     loadNotifs();
   }, []);
 
-  const logout = () => { sessionStorage.clear(); navigate("/login"); };
+  const logout = async () => { await deconnexion(); navigate("/login"); };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">

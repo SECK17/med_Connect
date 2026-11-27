@@ -63,7 +63,7 @@ export default function Chat() {
     fetchConversations();
     fetchRdvDoctors();
 
-    const socket = io(SOCKET_URL, { auth: { token } });
+    const socket = io(SOCKET_URL, { auth: (cb) => cb({ token: sessionStorage.getItem("token") }) }); // jeton relu à chaque reconnexion
     socket.emit("join_user", { userId: meId });
     socket.on("new_message_notif", () => fetchConversations());
     return () => socket.disconnect();

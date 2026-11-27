@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../config.js";
 
+import { deconnexion } from "../auth.js";
 const ROLE_LABELS = {
   patient: "Patient",
   medecin: "Médecin",
@@ -55,10 +56,8 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("role");
-    sessionStorage.removeItem("nom");
+  const handleLogout = async () => {
+    await deconnexion();
     navigate("/login");
   };
 

@@ -38,6 +38,20 @@ const User = sequelize.define("User", {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  // true par défaut : les comptes existants et ceux créés par un admin sont considérés vérifiés.
+  // L'inscription publique (register) le met à false jusqu'au clic sur le lien reçu par email.
+  email_verifie: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+  },
+  // Incrémenté pour invalider immédiatement tous les jetons d'accès de l'utilisateur
+  // (déconnexion de tous les appareils, changement de mot de passe).
+  token_version: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
 }, {
   tableName: "users",
   timestamps: true,

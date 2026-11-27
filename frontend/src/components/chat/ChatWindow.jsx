@@ -18,15 +18,48 @@ export default function ChatWindow({ meId, interlocuteur, onClose, onNewMessage 
   const [hoveredId,   setHoveredId]   = useState(null);
   const [editingMsg,  setEditingMsg]  = useState(null); // { id, contenu }
   const [editTexte,   setEditTexte]   = useState("");
+  const [hasMore,     setHasMore]     = useState(false);
+  const [loadingOld,  setLoadingOld]  = useState(false);
   const socketRef = useRef(null);
   const bottomRef = useRef(null);
   const editRef   = useRef(null);
+  const listRef   = useRef(null);
+  const skipScroll = useRef(false); // ne pas descendre en bas quand on charge des anciens messages
   const token     = sessionStorage.getItem("token");
+
+  const PAGE = 50;
+
+  const chargerAnciens = async () => {
+    if (!messages.length || loadingOld) return;
+    setLoadingOld(true);
+    const el = listRef.current;
+    const prevHeight = el?.scrollHeight || 0;
+    try {
+      const res = await fetch(
+        `${SOCKET_URL}/api/messages/${interlocuteur.id}?limit=${PAGE}&before=${messages[0].id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      setHasMore(res.headers.get("X-Has-More") === "true");
+      if (Array.isArray(data) && data.length) {
+        skipScroll.current = true;
+        setMessages(prev => [...data, ...prev]);
+        // Conserver la position de lecture après l'ajout en haut
+        requestAnimationFrame(() => {
+          if (el) el.scrollTop = el.scrollHeight - prevHeight;
+        });
+      }
+    } catch {
+      /* on laisse le bouton disponible pour réessayer */
+    } finally {
+      setLoadingOld(false);
+    }
+  };
 
   useEffect(() => {
     if (!interlocuteur) return;
 
-    socketRef.current = io(SOCKET_URL, { auth: { token } });
+    socketRef.current = io(SOCKET_URL, { auth: (cb) => cb({ token: sessionStorage.getItem("token") }) }); // jeton relu à chaque reconnexion
     socketRef.current.emit("join_user", { userId: meId });
     socketRef.current.emit("join_chat", { userId: meId, interlocuteurId: interlocuteur.id });
 
@@ -42,10 +75,10 @@ export default function ChatWindow({ meId, interlocuteur, onClose, onNewMessage 
       setMessages(prev => prev.map(m => m.id === id ? { ...m, contenu, modifie: true } : m));
     });
 
-    fetch(`${SOCKET_URL}/api/messages/${interlocuteur.id}`, {
+    fetch(`${SOCKET_URL}/api/messages/${interlocuteur.id}?limit=${PAGE}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.json())
+      .then(r => { setHasMore(r.headers.get("X-Has-More") === "true"); return r.json(); })
       .then(data => { setMessages(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
 
@@ -53,6 +86,7 @@ export default function ChatWindow({ meId, interlocuteur, onClose, onNewMessage 
   }, [interlocuteur?.id]);
 
   useEffect(() => {
+    if (skipScroll.current) { skipScroll.current = false; return; }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -146,7 +180,17 @@ export default function ChatWindow({ meId, interlocuteur, onClose, onNewMessage 
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1" style={{ background: "#f0f2f5" }}>
+      <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-1" style={{ background: "#f0f2f5" }}>
+        {!loading && hasMore && (
+          <div className="flex justify-center pb-2">
+            <button
+              onClick={chargerAnciens} disabled={loadingOld}
+              className="text-[11px] font-medium text-blue-700 bg-white hover:bg-blue-50 disabled:opacity-60 px-3 py-1.5 rounded-full shadow-sm border border-blue-100 transition-colors"
+            >
+              {loadingOld ? "Chargement…" : "Charger les messages précédents"}
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center h-full text-[13px] text-gray-400">Chargement…</div>
         ) : messages.length === 0 ? (

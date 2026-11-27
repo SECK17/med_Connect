@@ -9,6 +9,7 @@ import {
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { API_URL } from "../../config.js";
 
+import { deconnexion } from "../../auth.js";
 const NAV = [
   { to: "accueil",        label: "Tableau de bord",  icon: LayoutDashboard },
   { to: "demandes",       label: "Demandes RDV",      icon: CalendarDays    },
@@ -69,7 +70,7 @@ export default function MedecinLayout() {
     setNotifs([]);
   };
 
-  const logout = () => { sessionStorage.clear(); navigate("/login"); };
+  const logout = async () => { await deconnexion(); navigate("/login"); };
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   const SidebarContent = () => (

@@ -12,6 +12,9 @@ const transporter = nodemailer.createTransport({
 
 const FROM = `"MedConnect" <${process.env.EMAIL_USER}>`;
 
+// Adresse du frontend pour les liens (1re URL si CLIENT_URL en contient plusieurs)
+const APP_URL = (process.env.CLIENT_URL || "http://localhost:5173").split(",")[0].trim().replace(/\/+$/, "");
+
 // ── Styles partagés ──────────────────────────────────────────
 const BASE = `
   <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;background:#f8fafc;padding:32px 16px;">
@@ -42,8 +45,21 @@ const ROLE_COLORS = {
   admin_hopital: "#F59E0B",
 };
 
+// ── Mode test : aucun email réel, on garde une trace en mémoire ──
+// Les tests lisent emailService.outbox pour récupérer les liens envoyés.
+const IS_TEST = process.env.NODE_ENV === "test";
+
+// Sans SMTP configuré, les liens (vérification d'email, mot de passe oublié) sont affichés
+// dans les logs du serveur : en développement, ou en production si EMAIL_LIENS_DANS_LOGS=true
+// (essai local avec Docker). Sans effet dès que EMAIL_USER / EMAIL_PASS sont renseignés.
+const liensDansLogs = () =>
+  (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) &&
+  (process.env.NODE_ENV !== "production" || process.env.EMAIL_LIENS_DANS_LOGS === "true");
+const outbox = [];
+
 // ── Envoi générique (fire-and-forget) ───────────────────────
 async function send(to, subject, html) {
+  if (IS_TEST) { outbox.push({ to, subject }); return; }
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
   try {
     await transporter.sendMail({ from: FROM, to, subject, html });
@@ -79,7 +95,7 @@ async function sendBienvenue(email, nom, role) {
 
       ${!isMedecin ? `
       <div style="text-align:center;margin:28px 0;">
-        <a href="${process.env.CLIENT_URL || "http://localhost:5173"}/login"
+        <a href="${APP_URL}/login"
            style="background:${color};color:#fff;padding:14px 32px;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px;display:inline-block;">
           Accéder à mon espace →
         </a>
@@ -113,7 +129,7 @@ async function sendMedecinValide(email, nom) {
       </p>
 
       <div style="text-align:center;margin:28px 0;">
-        <a href="${process.env.CLIENT_URL || "http://localhost:5173"}/login"
+        <a href="${APP_URL}/login"
            style="background:#10B981;color:#fff;padding:14px 32px;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px;display:inline-block;">
           Se connecter maintenant →
         </a>
@@ -227,7 +243,7 @@ async function sendRdvAnnule(emailPatient, nomPatient, nomMedecin, dateRdv) {
       </p>
 
       <div style="text-align:center;margin:24px 0;">
-        <a href="${process.env.CLIENT_URL || "http://localhost:5173"}/login"
+        <a href="${APP_URL}/login"
            style="background:#3B82F6;color:#fff;padding:14px 32px;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px;display:inline-block;">
           Prendre un nouveau RDV →
         </a>
@@ -238,4 +254,76 @@ async function sendRdvAnnule(emailPatient, nomPatient, nomMedecin, dateRdv) {
   await send(emailPatient, `MedConnect — Rendez-vous annulé`, html);
 }
 
-module.exports = { sendBienvenue, sendMedecinValide, sendMedecinRejete, sendRdvConfirme, sendRdvAnnule };
+// ── 6. Réinitialisation du mot de passe ─────────────────────
+async function sendResetPassword(email, nom, token) {
+  const lien = `${APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
+  if (IS_TEST) { outbox.push({ to: email, type: "reset-password", lien, token }); return; }
+
+  // En développement sans SMTP configuré, on affiche le lien dans la console
+  if (liensDansLogs()) {
+    console.log(`[email] SMTP non configuré — lien de réinitialisation pour ${email} :\n${lien}`);
+    return;
+  }
+
+  const html = BASE + `
+    <div style="background:linear-gradient(135deg,#3B82F6 0%,#3B82F6cc 100%);padding:36px 32px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;">MedConnect</h1>
+      <p style="color:rgba(255,255,255,.75);margin:6px 0 0;font-size:13px;">Réinitialisation du mot de passe</p>
+    </div>
+
+    <div style="padding:32px;">
+      <h2 style="color:#1e293b;font-size:20px;margin:0 0 8px;">Bonjour ${nom},</h2>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 24px;">
+        Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous
+        pour en choisir un nouveau. Ce lien est valable <strong>1 heure</strong> et ne peut servir qu'une fois.
+      </p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${lien}"
+           style="background:#3B82F6;color:#fff;padding:14px 32px;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px;display:inline-block;">
+          Choisir un nouveau mot de passe →
+        </a>
+      </div>
+      <p style="color:#94a3b8;font-size:12px;line-height:1.6;margin:0;">
+        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de passe restera inchangé.
+      </p>
+    </div>
+  ` + FOOTER;
+
+  await send(email, "MedConnect — Réinitialisation du mot de passe", html);
+}
+
+// ── 7. Vérification de l'adresse email ──────────────────────
+async function sendVerificationEmail(email, nom, token) {
+  const lien = `${APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
+  if (IS_TEST) { outbox.push({ to: email, type: "verify-email", lien, token }); return; }
+
+  if (liensDansLogs()) {
+    console.log(`[email] SMTP non configuré — lien de vérification pour ${email} :\n${lien}`);
+    return;
+  }
+
+  const html = BASE + `
+    <div style="background:linear-gradient(135deg,#3B82F6 0%,#3B82F6cc 100%);padding:36px 32px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;">MedConnect</h1>
+      <p style="color:rgba(255,255,255,.75);margin:6px 0 0;font-size:13px;">Confirmez votre adresse email</p>
+    </div>
+
+    <div style="padding:32px;">
+      <h2 style="color:#1e293b;font-size:20px;margin:0 0 8px;">Bonjour ${nom},</h2>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 24px;">
+        Merci de vous être inscrit sur MedConnect. Pour activer votre compte, confirmez votre
+        adresse email en cliquant sur le bouton ci-dessous. Ce lien est valable <strong>24 heures</strong>.
+      </p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${lien}"
+           style="background:#3B82F6;color:#fff;padding:14px 32px;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px;display:inline-block;">
+          Confirmer mon email →
+        </a>
+      </div>
+    </div>
+  ` + FOOTER;
+
+  await send(email, "MedConnect — Confirmez votre adresse email", html);
+}
+
+module.exports = { outbox, sendBienvenue, sendMedecinValide, sendMedecinRejete, sendRdvConfirme, sendRdvAnnule, sendResetPassword, sendVerificationEmail };

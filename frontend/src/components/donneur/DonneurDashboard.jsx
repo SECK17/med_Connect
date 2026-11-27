@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import { deconnexion } from "../../auth.js";
 import {
   LayoutDashboard, Droplets, User, LogOut,
   Menu, X, Heart, Bell, CheckCircle2,
@@ -22,7 +23,7 @@ export default function DonneurLayout() {
   const email    = sessionStorage.getItem("email") || "";
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
-  const logout = () => { sessionStorage.clear(); navigate("/login"); };
+  const logout = async () => { await deconnexion(); navigate("/login"); };
 
   const loadNotifs = () => {
     const saved = JSON.parse(localStorage.getItem("medconnect_donneur_notifications") || "[]");

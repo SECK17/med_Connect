@@ -1,23 +1,27 @@
 // middleware/authenticate.js
-const jwt = require('jsonwebtoken');
+const { verifierJetonAcces } = require('../services/tokenService');
+
+const MESSAGES = {
+  TOKEN_MANQUANT: 'Token manquant.',
+  TOKEN_EXPIRE:   'Session expirée.',
+  TOKEN_REVOQUE:  'Session révoquée. Veuillez vous reconnecter.',
+  TOKEN_INVALIDE: 'Token invalide.',
+};
 
 /**
  * Middleware d'authentification
- * Vérifie que le token JWT est valide et ajoute les données utilisateur à req.user
+ * Vérifie le jeton d'accès (signature, expiration, révocation) et place { id, role } dans req.user.
+ * En cas d'échec : 401 avec un `code` (TOKEN_EXPIRE → le frontend tente un rafraîchissement).
  */
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1]; // "Bearer TOKEN"
-
-    if (!token) {
-      return res.status(401).json({ message: 'Token manquant.' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, role }
+    const { user, erreur } = await verifierJetonAcces(token);
+    if (erreur) return res.status(401).json({ code: erreur, message: MESSAGES[erreur] });
+    req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Token invalide ou expiré.' });
+    next(error);
   }
 };
 
@@ -39,4 +43,20 @@ const authorize = (...allowedRoles) => {
   };
 };
 
-module.exports = { authenticate, authorize };
+/**
+ * Variante pour les fichiers (/uploads/...) : le jeton peut aussi venir de ?token=,
+ * car <img src> et window.open ne peuvent pas envoyer d'en-tête Authorization.
+ */
+const authenticateFichier = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1] || req.query.token;
+    const { user, erreur } = await verifierJetonAcces(token);
+    if (erreur) return res.status(401).json({ code: erreur, message: 'Accès non autorisé.' });
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { authenticate, authenticateFichier, authorize };

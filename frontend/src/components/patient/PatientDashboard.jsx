@@ -4,15 +4,17 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard, Calendar, FolderOpen, Stethoscope,
   Building2, Droplets, Bell, User, LogOut, Menu, X, Heart,
-  CheckCircle2, MessageSquare,
+  CheckCircle2, MessageSquare, ShieldCheck,
 } from "lucide-react";
 import { API_URL } from "../../config.js";
 
+import { deconnexion } from "../../auth.js";
 const NAV = [
   { to: "accueil",    icon: LayoutDashboard, label: "Tableau de bord" },
   { to: "rendezvous", icon: Calendar,        label: "Mes rendez-vous" },
   { to: "messages",   icon: MessageSquare,   label: "Messages",        badge: "msg" },
   { to: "dossier",    icon: FolderOpen,      label: "Dossier médical" },
+  { to: "acces",      icon: ShieldCheck,     label: "Accès au dossier" },
   { to: "medecins",   icon: Stethoscope,     label: "Trouver un médecin" },
   { to: "hopitaux",   icon: Building2,       label: "Prestataires" },
   { to: "sang",       icon: Droplets,        label: "Don de sang" },
@@ -29,7 +31,7 @@ export default function PatientLayout() {
   const email    = sessionStorage.getItem("email") || "";
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
-  const logout = () => { sessionStorage.clear(); navigate("/login"); };
+  const logout = async () => { await deconnexion(); navigate("/login"); };
 
   const loadNotifs = () => {
     const saved = JSON.parse(localStorage.getItem("medconnect_patient_notifications") || "[]");
