@@ -3,35 +3,30 @@ require('dotenv').config();
 const http    = require('http');
 const express = require('express');
 const cors    = require('cors');
+const helmet  = require('helmet');
+const cookieParser = require('cookie-parser');
 const { Server } = require('socket.io');
+
+// Origines autorisées (CLIENT_URL peut contenir plusieurs URLs séparées par des virgules)
+const ALLOWED_ORIGINS = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map(o => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+const corsOptions = {
+  origin: ALLOWED_ORIGINS,
+  credentials: true,
+  // Rend les en-têtes de pagination lisibles par le frontend
+  exposedHeaders: ['X-Total-Count', 'X-Page', 'X-Limit', 'X-Total-Pages', 'X-Has-More'],
+};
 
 // ──────────────────────────
 // Base de données
 // ──────────────────────────
 const { connectDB } = require('./src/config/db');
-const { syncDatabase } = require('./src/models/index');
-const Hopital = require('./src/models/Hopital');
-
-const HOPITAUX_SEED = [
-  { nom: 'Hôpital Principal de Dakar',        type: 'Hôpital',  ville: 'Dakar'       },
-  { nom: 'CHU de Fann',                        type: 'CHU',      ville: 'Dakar'       },
-  { nom: 'Hôpital Aristide Le Dantec',         type: 'Hôpital',  ville: 'Dakar'       },
-  { nom: 'Hôpital Général de Grand Yoff (HOGGY)', type: 'Hôpital', ville: 'Dakar'    },
-  { nom: 'Hôpital de Pikine',                  type: 'Hôpital',  ville: 'Pikine'      },
-  { nom: 'Hôpital Abass Ndao',                 type: 'Hôpital',  ville: 'Dakar'       },
-  { nom: 'Hôpital Roi Baudouin (Guédiawaye)',  type: 'Hôpital',  ville: 'Guédiawaye'  },
-  { nom: 'Hôpital de Ouakam',                  type: 'Hôpital',  ville: 'Dakar'       },
-  { nom: 'Polyclinique SUMA',                  type: 'Centre',   ville: 'Dakar'       },
-  { nom: 'Clinique Pasteur',                   type: 'Clinique', ville: 'Dakar'       },
-];
-
-const seedHopitaux = async () => {
-  const count = await Hopital.count();
-  if (count === 0) {
-    await Hopital.bulkCreate(HOPITAUX_SEED);
-    console.log('✅ Hôpitaux seedés (10 établissements)');
-  }
-};
+require('./src/models/index'); // enregistre les modèles et leurs relations
+const { migrer, etat: etatMigrations } = require('./src/db/migrations');
+const { verifierSchema } = require('./src/db/verifierSchema');
+const { seedHopitaux } = require('./src/db/seed');
 
 // ──────────────────────────
 // Routes
@@ -53,59 +48,95 @@ const demandeHopitalRoutes  = require('./src/routes/demandeHopitalRoutes');
 const messageRoutes         = require('./src/routes/messageRoutes');
 const pushRoutes            = require('./src/routes/pushRoutes');
 const evaluationRoutes      = require('./src/routes/evaluationRoutes');
+const journalRoutes    = require('./src/routes/journalRoutes');
+const fileRoutes            = require('./src/routes/fileRoutes');
 
 // ──────────────────────────
 // Rate limiting in-memory (anti brute-force)
 // ──────────────────────────
-const _rlStore = new Map();
-const rateLimit = (maxReq, windowMs) => (req, res, next) => {
-  const key = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-  const now  = Date.now();
-  const hits  = (_rlStore.get(key) || []).filter(t => t > now - windowMs);
-  hits.push(now);
-  _rlStore.set(key, hits);
-  if (hits.length > maxReq) {
-    return res.status(429).json({ message: 'Trop de tentatives. Réessayez dans quelques minutes.' });
-  }
-  next();
+// Chaque limiteur a son propre compteur (sinon deux limites différentes se mélangent).
+const rateLimit = (maxReq, windowMs) => {
+  const store = new Map();
+  // Nettoyage périodique pour éviter les fuites mémoire
+  // (unref : ce minuteur n'empêche pas le processus de s'arrêter, utile pour les tests)
+  setInterval(() => {
+    const cutoff = Date.now() - windowMs;
+    for (const [k, v] of store) {
+      const kept = v.filter(t => t > cutoff);
+      if (kept.length === 0) store.delete(k);
+      else store.set(k, kept);
+    }
+  }, Math.min(windowMs, 5 * 60 * 1000)).unref();
+
+  return (req, res, next) => {
+    const key = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const now  = Date.now();
+    const hits  = (store.get(key) || []).filter(t => t > now - windowMs);
+    hits.push(now);
+    store.set(key, hits);
+    if (hits.length > maxReq) {
+      return res.status(429).json({ message: 'Trop de tentatives. Réessayez dans quelques minutes.' });
+    }
+    next();
+  };
 };
-// Nettoyage périodique pour éviter les fuites mémoire
-setInterval(() => {
-  const cutoff = Date.now() - 15 * 60 * 1000;
-  for (const [k, v] of _rlStore) {
-    const kept = v.filter(t => t > cutoff);
-    if (kept.length === 0) _rlStore.delete(k);
-    else _rlStore.set(k, kept);
-  }
-}, 5 * 60 * 1000);
+
+// Nombre max de requêtes /api/auth par IP et par 15 min (configurable, 10 par défaut)
+const AUTH_RATE_LIMIT = parseInt(process.env.AUTH_RATE_LIMIT, 10) || 10;
 
 // ──────────────────────────
 // Initialisation Express + HTTP + Socket.io
 // ──────────────────────────
 const app    = express();
+
+// Derrière un proxy (nginx dans Docker) : sans cela, req.ip serait l'IP du proxy pour tout
+// le monde, et la limite anti brute-force bloquerait tous les utilisateurs à la fois.
+// TRUST_PROXY = nombre de proxys de confiance (ex. 1), true/false, ou liste d'IP / sous-réseaux.
+// À ne définir QUE si l'API n'est joignable qu'à travers ce proxy.
+const lireTrustProxy = (v) => {
+  if (v === undefined || v === '') return false;
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return /^\d+$/.test(v) ? parseInt(v, 10) : v;
+};
+app.set('trust proxy', lireTrustProxy(process.env.TRUST_PROXY));
 const server = http.createServer(app);
 const io     = new Server(server, {
-  cors: {
-    origin: true,
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  cors: { ...corsOptions, methods: ['GET', 'POST'] },
 });
 
 // Middleware
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
-app.use(express.json());
+// crossOriginResourcePolicy: le frontend (autre origine) doit pouvoir afficher les images servies.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+// Santé du service (Docker, supervision) : répond 200 si l'API et la base répondent
+app.get('/api/health', async (req, res) => {
+  try {
+    await require('./src/config/db').sequelize.query('SELECT 1');
+    res.json({ status: 'ok' });
+  } catch {
+    res.status(503).json({ status: 'erreur', message: 'Base de données injoignable.' });
+  }
+});
+
+// Fichiers médicaux : accès authentifié et contrôlé (plus de dossier public)
+app.use('/uploads', fileRoutes);
 
 // ──────────────────────────
 // Routes
 // ──────────────────────────
-// Max 10 tentatives de login par 15 min par IP
-app.use('/api/auth', rateLimit(10, 15 * 60 * 1000), authRoutes);
+// Max AUTH_RATE_LIMIT tentatives par 15 min par IP (anti brute-force)
+// Le renouvellement de session (/refresh, /logout) a sa propre limite, plus large :
+// chaque onglet ouvert se rafraîchit toutes les ~14 min et ne doit pas consommer
+// le quota des tentatives de connexion.
+const authLimiter    = rateLimit(AUTH_RATE_LIMIT, 15 * 60 * 1000);
+const sessionLimiter = rateLimit(AUTH_RATE_LIMIT * 6, 15 * 60 * 1000);
+const SESSION_PATHS  = new Set(['/refresh', '/logout']);
+app.use('/api/auth', (req, res, next) =>
+  (SESSION_PATHS.has(req.path) ? sessionLimiter : authLimiter)(req, res, next), authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rendezvous', rendezvousRoutes);
 app.use('/api/medecins', medecinRoutes);
@@ -122,70 +153,14 @@ app.use('/api/demandes-hopital', demandeHopitalRoutes);
 app.use('/api/messages',         messageRoutes);
 app.use('/api/push',             pushRoutes);
 app.use('/api/evaluations',      evaluationRoutes);
+app.use('/api/journal',          journalRoutes);
 
 // ──────────────────────────
-// Socket.io — chat temps réel
+// Socket.io — chat temps réel (src/sockets/chat.js)
 // ──────────────────────────
-const Message          = require('./src/models/Message');
-const { sendPush }     = require('./src/services/pushService');
-
-const roomId = (a, b) => `chat_${Math.min(a, b)}_${Math.max(a, b)}`;
-
-io.on('connection', (socket) => {
-  socket.on('join_user', ({ userId }) => {
-    socket.join(`user_${userId}`);
-  });
-
-  socket.on('join_chat', ({ userId, interlocuteurId }) => {
-    socket.join(roomId(userId, interlocuteurId));
-  });
-
-  socket.on('send_message', async ({ expediteur_id, destinataire_id, contenu }) => {
-    try {
-      const msg = await Message.create({ expediteur_id, destinataire_id, contenu });
-      const room = roomId(expediteur_id, destinataire_id);
-      io.to(room).emit('message_received', msg);
-      io.to(`user_${destinataire_id}`).emit('new_message_notif', {
-        from_id: expediteur_id,
-        contenu,
-        date: msg.created_at,
-      });
-      // Notification push au destinataire
-      sendPush(destinataire_id, {
-        title: 'Nouveau message',
-        body: contenu.length > 60 ? contenu.slice(0, 60) + '…' : contenu,
-        icon: '/favicon.svg',
-        url: '/dashboard',
-      });
-    } catch (err) {
-      console.error('Erreur socket send_message:', err);
-    }
-  });
-
-  socket.on('delete_message', async ({ message_id, expediteur_id }) => {
-    try {
-      const msg = await Message.findByPk(message_id);
-      if (!msg || msg.expediteur_id !== expediteur_id) return;
-      await msg.update({ supprime: true });
-      const room = roomId(msg.expediteur_id, msg.destinataire_id);
-      io.to(room).emit('message_deleted', { id: message_id });
-    } catch (err) {
-      console.error('Erreur socket delete_message:', err);
-    }
-  });
-
-  socket.on('edit_message', async ({ message_id, expediteur_id, nouveau_contenu }) => {
-    try {
-      const msg = await Message.findByPk(message_id);
-      if (!msg || msg.expediteur_id !== expediteur_id || msg.supprime) return;
-      await msg.update({ contenu: nouveau_contenu, modifie: true, modifie_at: new Date() });
-      const room = roomId(msg.expediteur_id, msg.destinataire_id);
-      io.to(room).emit('message_edited', { id: message_id, contenu: nouveau_contenu });
-    } catch (err) {
-      console.error('Erreur socket edit_message:', err);
-    }
-  });
-});
+const { nettoyer: nettoyerSessions } = require('./src/services/tokenService');
+const { purgerJournal } = require('./src/middleware/journal');
+require('./src/sockets/chat')(io);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Serveur MedConnect opérationnel ✓' });
@@ -194,6 +169,28 @@ app.get('/', (req, res) => {
 // Gestion des erreurs 404
 app.use((req, res) => {
   res.status(404).json({ message: 'Route non trouvée.' });
+});
+
+// Gestionnaire d'erreurs global (Multer, JSON invalide, erreurs non gérées)
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  if (err.name === 'MulterError') {
+    const message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'Fichier trop volumineux (10 Mo maximum).'
+      : `Erreur d'upload : ${err.message}`;
+    return res.status(400).json({ message });
+  }
+  if (err.message && err.message.startsWith('Format non supporté')) {
+    return res.status(400).json({ message: err.message });
+  }
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ message: 'JSON invalide.' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ message: 'Requête trop volumineuse.' });
+  }
+  console.error('Erreur non gérée:', err);
+  res.status(err.status || 500).json({ message: 'Erreur serveur.' });
 });
 
 // ──────────────────────────
@@ -207,12 +204,29 @@ const start = async () => {
     await connectDB();
     console.log('✅ Base de données connectée');
 
-    // 2. Synchronisation des modèles
-    await syncDatabase();
-    console.log('✅ Modèles synchronisés');
+    // 2. Schéma de la base : migrations versionnées (dossier migrations/).
+    //    MIGRATIONS_AUTO=false → le serveur refuse de démarrer s'il en reste à appliquer
+    //    (à lancer alors à la main : npm run migrate).
+    if (process.env.MIGRATIONS_AUTO === 'false') {
+      const { enAttente } = await etatMigrations();
+      if (enAttente.length) {
+        throw new Error(`${enAttente.length} migration(s) en attente (${enAttente.join(', ')}). Lancez : npm run migrate`);
+      }
+    } else {
+      const faites = await migrer();
+      console.log(faites.length ? `✅ ${faites.length} migration(s) appliquée(s)` : '✅ Base à jour');
+    }
+    const ecarts = await verifierSchema();
+    if (ecarts.length) {
+      console.warn("⚠️  Les modèles ne correspondent pas à la base (migration manquante ?) :\n  - " + ecarts.join('\n  - '));
+    }
 
-    // 3. Seed données initiales
+    // 3. Seed données initiales + nettoyage des sessions expirées
     await seedHopitaux();
+    nettoyerSessions().catch(() => {});
+    purgerJournal()
+      .then((n) => { if (n) console.log(`🧹 Journal d'accès : ${n} entrée(s) ancienne(s) supprimée(s)`); })
+      .catch((e) => console.warn('[journal] purge :', e.message));
 
     // 4. Démarrage du serveur
     server.listen(PORT, () => {
@@ -224,4 +238,10 @@ const start = async () => {
   }
 };
 
-start();
+// Démarre seulement si le fichier est lancé directement (node server.js / nodemon).
+// Quand il est importé (tests), on expose l'application sans ouvrir de port.
+if (require.main === module) {
+  start();
+}
+
+module.exports = { app, server, io, rateLimit, seedHopitaux };
