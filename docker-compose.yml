@@ -1,0 +1,85 @@
+# MedConnect — lancement complet avec Docker
+#   cp .env.docker.example .env      (puis remplir les secrets)
+#   docker compose up -d --build
+#   → http://localhost:8080
+# Détails : DOCKER.md
+name: medconnect
+
+services:
+  # ── Base de données PostgreSQL ─────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-medconnect}
+      POSTGRES_USER: ${DB_USER:-medconnect}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Définissez DB_PASSWORD dans .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Port non exposé : la base n'est joignable que par le backend.
+    # Pour s'y connecter depuis votre machine, décommentez :
+    # ports:
+    #   - "127.0.0.1:5433:5432"
+
+  # ── API (Express + Socket.io) ─────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-medconnect}
+      DB_USER: ${DB_USER:-medconnect}
+      DB_PASSWORD: ${DB_PASSWORD:?Définissez DB_PASSWORD dans .env}
+      JWT_SECRET: ${JWT_SECRET:?Définissez JWT_SECRET dans .env}
+      ADMIN_CODE: ${ADMIN_CODE:?Définissez ADMIN_CODE dans .env}
+      # Adresse publique du site (liens dans les emails, CORS)
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:8080}
+      # L'API n'est joignable qu'à travers nginx (1 proxy) → vraie IP des visiteurs
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      # Cookie de session Secure dès que le site est servi en HTTPS
+      COOKIE_SECURE: ${COOKIE_SECURE:-auto}
+      COOKIE_SAMESITE: lax
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-7}
+      AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-10}
+      MIGRATIONS_AUTO: ${MIGRATIONS_AUTO:-true}
+      JOURNAL_RETENTION_JOURS: ${JOURNAL_RETENTION_JOURS:-}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_LIENS_DANS_LOGS: ${EMAIL_LIENS_DANS_LOGS:-false}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_EMAIL: ${VAPID_EMAIL:-}
+    volumes:
+      - uploads:/app/uploads   # ordonnances, analyses, justificatifs
+    # Port non exposé : tout passe par nginx (service frontend)
+
+  # ── Site (React servi par nginx, relaie /api vers le backend) ──
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+
+volumes:
+  db-data:
+  uploads:
