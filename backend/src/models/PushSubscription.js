@@ -12,6 +12,8 @@ const PushSubscription = sequelize.define('PushSubscription', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: false,
+  // Un abonnement par appareil (endpoint) et par utilisateur — migration 20261127145858
+  indexes: [{ unique: true, fields: ['user_id', 'endpoint'], name: 'push_subscriptions_user_id_endpoint' }],
 });
 
 module.exports = PushSubscription;

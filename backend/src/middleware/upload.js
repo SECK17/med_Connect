@@ -2,16 +2,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const makeStorage = (folder) => {
+const nomAleatoire = (_req, file) =>
+  `${Date.now()}-${Math.round(Math.random() * 1e6)}${path.extname(file.originalname).toLowerCase()}`;
+
+const makeStorage = (folder, nommer = nomAleatoire) => {
   const dir = path.join(__dirname, '../../uploads', folder);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
   return multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, dir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      cb(null, `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`);
-    },
+    filename: (req, file, cb) => cb(null, nommer(req, file)),
   });
 };
 
@@ -26,5 +26,12 @@ const limits = { fileSize: 10 * 1024 * 1024 }; // 10 MB
 
 const uploadOrdonnance = multer({ storage: makeStorage('ordonnances'), fileFilter, limits });
 const uploadAnalyse    = multer({ storage: makeStorage('analyses'),    fileFilter, limits });
+// Justificatif d'une demande de changement d'hôpital (consulté par l'admin uniquement)
+const uploadJustificatif = multer({
+  storage: makeStorage('demandes', (req, file) =>
+    `demande_${req.user.id}_${Date.now()}${path.extname(file.originalname).toLowerCase()}`),
+  fileFilter,
+  limits,
+});
 
-module.exports = { uploadOrdonnance, uploadAnalyse };
+module.exports = { uploadOrdonnance, uploadAnalyse, uploadJustificatif };
