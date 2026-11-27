@@ -6,6 +6,7 @@ import {
   LayoutList, CalendarRange, ChevronLeft, ChevronRight, User,
 } from "lucide-react";
 import CameraModal from "../../CameraModal";
+import { API_URL } from "../../../config.js";
 
 const STATUT_CFG = {
   en_attente: { label: "En attente", bg: "bg-amber-100",   text: "text-amber-700"   },
@@ -50,7 +51,7 @@ export default function MedecinRendezVous() {
 
   useEffect(() => {
     if (!token || !userId) { setLoading(false); return; }
-    fetch(`http://localhost:5000/api/rendezvous/medecin/${userId}`, {
+    fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
@@ -88,7 +89,7 @@ export default function MedecinRendezVous() {
       fd.append("fichier", prescFile);
       fd.append("patient_id", prescModal.patientId);
       if (notes.trim()) fd.append("notes", notes.trim());
-      const res = await fetch("http://localhost:5000/api/ordonnances/upload", {
+      const res = await fetch(`${API_URL}/api/ordonnances/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -110,7 +111,7 @@ export default function MedecinRendezVous() {
     if (!valid.length) return showToast("Ajoutez au moins un médicament", "error");
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:5000/api/ordonnances", {
+      const res = await fetch(`${API_URL}/api/ordonnances`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -150,7 +151,7 @@ export default function MedecinRendezVous() {
       fd.append("fichier", analyseFile);
       fd.append("patient_id", analyseModal.patientId);
       if (analyseNotes.trim()) fd.append("notes", analyseNotes.trim());
-      const res = await fetch("http://localhost:5000/api/analyses/upload", {
+      const res = await fetch(`${API_URL}/api/analyses/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,

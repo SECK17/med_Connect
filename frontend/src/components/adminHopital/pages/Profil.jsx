@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { User, Building2, Mail, Phone, ShieldCheck, Droplets } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 export default function AdminHopitalProfil() {
   const [profil,  setProfil]  = useState(null);
@@ -9,7 +10,7 @@ export default function AdminHopitalProfil() {
   const nom   = sessionStorage.getItem("nom") || "Admin";
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin-hopital/me", {
+    fetch(`${API_URL}/api/admin-hopital/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)

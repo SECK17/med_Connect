@@ -10,6 +10,7 @@ import {
   ArrowRightLeft, FileText, CheckCircle, XCircle as XCircleIcon,
   Pencil, AlertTriangle, Bell, CalendarDays,
 } from "lucide-react";
+import { API_URL } from "../../config.js";
 
 /* ── Constantes ────────────────────────────────────────────── */
 const NAV = [
@@ -122,7 +123,7 @@ export default function AdminDashboard() {
 
   const fetchHopitauxRdvStats = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/hopitaux/rdv-stats-all", {
+      const res = await fetch(`${API_URL}/api/hopitaux/rdv-stats-all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
 
   const fetchHopitaux = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/hopitaux", {
+      const res = await fetch(`${API_URL}/api/hopitaux`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setHopitaux(await res.json());
@@ -154,9 +155,9 @@ export default function AdminDashboard() {
     setLoadingHop(true);
     try {
       const [rMed, rPat, rRdv] = await Promise.all([
-        fetch(`http://localhost:5000/api/hopitaux/${hop.id}/medecins`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`http://localhost:5000/api/hopitaux/${hop.id}/patients`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`http://localhost:5000/api/hopitaux/${hop.id}/rdv-stats`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/hopitaux/${hop.id}/medecins`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/hopitaux/${hop.id}/patients`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/hopitaux/${hop.id}/rdv-stats`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (rMed.ok) setHopitalMedecins(await rMed.json());
       if (rPat.ok) setHopitalPatients(await rPat.json());
@@ -168,7 +169,7 @@ export default function AdminDashboard() {
   const fetchAllAlertes = async () => {
     setLoadingAlertes(true);
     try {
-      const res = await fetch("http://localhost:5000/api/alertes-sang/toutes", {
+      const res = await fetch(`${API_URL}/api/alertes-sang/toutes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setAllAlertes(await res.json());
@@ -191,7 +192,7 @@ export default function AdminDashboard() {
     setSavingHop(true);
     try {
       const isEdit = hopitalModal.mode === "edit";
-      const url    = isEdit ? `http://localhost:5000/api/hopitaux/${hopitalModal.id}` : "http://localhost:5000/api/hopitaux";
+      const url    = isEdit ? `${API_URL}/api/hopitaux/${hopitalModal.id}` : `${API_URL}/api/hopitaux`;
       const res = await fetch(url, {
         method:  isEdit ? "PUT" : "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -212,7 +213,7 @@ export default function AdminDashboard() {
   const deleteHopital = async (id) => {
     setDeletingHop(id);
     try {
-      const res = await fetch(`http://localhost:5000/api/hopitaux/${id}`, {
+      const res = await fetch(`${API_URL}/api/hopitaux/${id}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
       const d = await res.json();
@@ -225,7 +226,7 @@ export default function AdminDashboard() {
   const fetchDemandes = async (statut = "en_attente") => {
     setLoadingDemandes(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/demandes-hopital?statut=${statut}`, {
+      const res = await fetch(`${API_URL}/api/demandes-hopital?statut=${statut}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setDemandes(await res.json());
@@ -236,7 +237,7 @@ export default function AdminDashboard() {
   const validerDemande = async (id) => {
     setActionLoading(id + "_val");
     try {
-      const res = await fetch(`http://localhost:5000/api/demandes-hopital/${id}/valider`, {
+      const res = await fetch(`${API_URL}/api/demandes-hopital/${id}/valider`, {
         method: "PUT", headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) { showToast("Demande validée — hôpital mis à jour !"); fetchDemandes(demandeFilter); }
@@ -250,7 +251,7 @@ export default function AdminDashboard() {
     if (!id) return;
     setActionLoading(id + "_rej");
     try {
-      const res = await fetch(`http://localhost:5000/api/demandes-hopital/${id}/rejeter`, {
+      const res = await fetch(`${API_URL}/api/demandes-hopital/${id}/rejeter`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ motif: rejetMotif }),
@@ -267,7 +268,7 @@ export default function AdminDashboard() {
 
   const fetchHopitalAdmins = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin-hopital", {
+      const res = await fetch(`${API_URL}/api/admin-hopital`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setHopitalAdmins(await res.json());
@@ -278,7 +279,7 @@ export default function AdminDashboard() {
     if (!createForm.nom || !createForm.email || !createForm.password || !selectedHopital) return;
     setCreatingAdmin(true);
     try {
-      const res = await fetch("http://localhost:5000/api/admin-hopital", {
+      const res = await fetch(`${API_URL}/api/admin-hopital`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ ...createForm, hopital_id: selectedHopital.id }),
@@ -298,7 +299,7 @@ export default function AdminDashboard() {
 
   const deleteAdminHop = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin-hopital/${id}`, {
+      const res = await fetch(`${API_URL}/api/admin-hopital/${id}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) { showToast("Admin retiré.", "info"); fetchHopitalAdmins(); }
@@ -308,7 +309,7 @@ export default function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/users", {
+      const res = await fetch(`${API_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setUsers(await res.json());
@@ -323,7 +324,7 @@ export default function AdminDashboard() {
 
   const handleValidate = async (userId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/validate`, {
+      const res = await fetch(`${API_URL}/api/users/${userId}/validate`, {
         method: "PUT", headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) { showToast("Compte médecin validé !"); fetchUsers(); }
@@ -333,7 +334,7 @@ export default function AdminDashboard() {
 
   const handleReject = async (userId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/reject`, {
+      const res = await fetch(`${API_URL}/api/users/${userId}/reject`, {
         method: "PUT", headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) { showToast("Compte rejeté.", "info"); setRejectModal(null); fetchUsers(); }
@@ -343,7 +344,7 @@ export default function AdminDashboard() {
 
   const handleDelete = async (userId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
+      const res = await fetch(`${API_URL}/api/users/${userId}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) { showToast("Utilisateur supprimé.", "info"); setDeleteModal(null); fetchUsers(); }
@@ -1585,7 +1586,7 @@ export default function AdminDashboard() {
                             {/* Justificatif */}
                             {d.justificatif && (
                               <a
-                                href={`http://localhost:5000/uploads/demandes/${d.justificatif}`}
+                                href={`${API_URL}/uploads/demandes/${d.justificatif}`}
                                 target="_blank" rel="noreferrer"
                                 className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-blue-600 hover:underline"
                               >

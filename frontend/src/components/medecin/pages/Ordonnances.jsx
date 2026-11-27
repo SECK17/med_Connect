@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { FileText, Search, CalendarDays, Pill, Image } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 export default function MedecinOrdonnances() {
   const [ordonnances, setOrdonnances] = useState([]);
@@ -11,7 +12,7 @@ export default function MedecinOrdonnances() {
   const userId = sessionStorage.getItem("userId");
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/ordonnances/medecin/${userId}`, {
+    fetch(`${API_URL}/api/ordonnances/medecin/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])

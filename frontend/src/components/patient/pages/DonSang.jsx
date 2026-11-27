@@ -4,6 +4,7 @@ import {
   Droplets, AlertTriangle, MapPin, Building2, Heart,
   CheckCircle2, ToggleLeft, ToggleRight, Star, ArrowRight, ArrowLeft, Phone, X,
 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const URGENCY_STYLE = {
   "Critique": { cls: "bg-red-50 border-red-300",      badge: "bg-red-100 text-red-700",      icon: "text-red-600"    },
@@ -40,7 +41,7 @@ export default function DonSang() {
 
   const fetchAlertesPatient = async (groupePat) => {
     const headers = { Authorization: `Bearer ${token}` };
-    const res = await fetch("http://localhost:5000/api/alertes-sang/patient", { headers });
+    const res = await fetch(`${API_URL}/api/alertes-sang/patient`, { headers });
     if (!res.ok) return;
     const alertesData = await res.json();
     setAlerts(alertesData);
@@ -74,7 +75,7 @@ export default function DonSang() {
     const load = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        fetch("http://localhost:5000/api/alertes-sang/mes-reponses", { headers })
+        fetch(`${API_URL}/api/alertes-sang/mes-reponses`, { headers })
           .then(r => r.ok ? r.json() : [])
           .then(rep => setMesReponses(new Set(rep.map(r => r.alerte_id))))
           .catch(() => {});
@@ -101,7 +102,7 @@ export default function DonSang() {
       dateInscription: new Date().toISOString(),
     };
     if (token) {
-      fetch("http://localhost:5000/api/donneur/inscription", {
+      fetch(`${API_URL}/api/donneur/inscription`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ groupe: monGroupe }),
@@ -118,7 +119,7 @@ export default function DonSang() {
     localStorage.setItem("medconnect_donor_profile", JSON.stringify(updated));
     setMonStatut(updated);
     if (token) {
-      fetch("http://localhost:5000/api/donneur/disponibilite", {
+      fetch(`${API_URL}/api/donneur/disponibilite`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {});
@@ -336,7 +337,7 @@ export default function DonSang() {
                       onClick={() => {
                         // Traçabilité
                         if (token) {
-                          fetch(`http://localhost:5000/api/alertes-sang/${a.id}/repondre`, {
+                          fetch(`${API_URL}/api/alertes-sang/${a.id}/repondre`, {
                             method: "POST",
                             headers: { Authorization: `Bearer ${token}` },
                           }).catch(() => {});

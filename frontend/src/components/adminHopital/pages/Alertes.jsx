@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Plus, Droplets, X, CheckCircle2, Trash2, Loader2, AlertTriangle, Navigation, Users, Phone, Mail } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const GROUPES  = ["A+","A-","B+","B-","AB+","AB-","O+","O-"];
 const URGENCES = ["Faible","Moyen","Urgent","Critique"];
@@ -77,7 +78,7 @@ export default function AdminHopitalAlertes() {
   const token = sessionStorage.getItem("token");
   const api = (url, opts = {}) => {
     const { headers: extra, ...rest } = opts;
-    return fetch("http://localhost:5000" + url, {
+    return fetch(API_URL + url, {
       headers: { Authorization: `Bearer ${token}`, ...extra },
       ...rest,
     });

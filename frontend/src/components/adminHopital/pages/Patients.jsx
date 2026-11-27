@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { UserRound, Search, Mail, Phone, CalendarDays, Stethoscope } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 export default function AdminHopitalPatients() {
   const [patients, setPatients] = useState([]);
@@ -9,7 +10,7 @@ export default function AdminHopitalPatients() {
   const token = sessionStorage.getItem("token");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin-hopital/patients", {
+    fetch(`${API_URL}/api/admin-hopital/patients`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])

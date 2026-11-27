@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Clock, CheckCircle2, X } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const JOURS = [
   { key: "lundi",    label: "Lundi"    },
@@ -35,7 +36,7 @@ export default function MedecinDisponibilites() {
   const userId = sessionStorage.getItem("userId");
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/medecins/${userId}`, {
+    fetch(`${API_URL}/api/medecins/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
@@ -51,7 +52,7 @@ export default function MedecinDisponibilites() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/medecins/${userId}`, {
+      const res = await fetch(`${API_URL}/api/medecins/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ disponibilites: dispo }),

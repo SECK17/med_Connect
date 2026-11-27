@@ -6,6 +6,7 @@ import {
   Building2, Droplets, Bell, User, LogOut, Menu, X, Heart,
   CheckCircle2, MessageSquare,
 } from "lucide-react";
+import { API_URL } from "../../config.js";
 
 const NAV = [
   { to: "accueil",    icon: LayoutDashboard, label: "Tableau de bord" },
@@ -64,7 +65,7 @@ export default function PatientLayout() {
     const token = sessionStorage.getItem("token");
     if (!token) return;
     try {
-      const res = await fetch("http://localhost:5000/api/messages/unread/count", {
+      const res = await fetch(`${API_URL}/api/messages/unread/count`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) { const d = await res.json(); setUnreadMsg(d.count); }

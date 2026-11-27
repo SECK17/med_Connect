@@ -8,6 +8,7 @@ import {
   FileText, Image, ClipboardList, ArrowRight, Stethoscope, TrendingUp,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { API_URL } from "../../../config.js";
 
 const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
@@ -49,8 +50,8 @@ export default function MedecinAccueil() {
     if (!token || !userId) { setLoading(false); return; }
     try {
       const [rdvRes, consultRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/rendezvous/medecin/${userId}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`http://localhost:5000/api/consultations/medecin/${userId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_URL}/api/consultations/medecin/${userId}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       const rdvData     = rdvRes.ok     ? await rdvRes.json()     : [];
       const consultData = consultRes.ok ? await consultRes.json() : [];
@@ -100,7 +101,7 @@ export default function MedecinAccueil() {
       fd.append("patient_id", prescModal.patientId);
       if (notes.trim()) fd.append("notes", notes.trim());
 
-      const res = await fetch("http://localhost:5000/api/ordonnances/upload", {
+      const res = await fetch(`${API_URL}/api/ordonnances/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -122,7 +123,7 @@ export default function MedecinAccueil() {
     if (!valid.length) return showToast("Ajoutez au moins un médicament", "error");
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:5000/api/ordonnances", {
+      const res = await fetch(`${API_URL}/api/ordonnances`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -164,7 +165,7 @@ export default function MedecinAccueil() {
       fd.append("patient_id", analyseModal.patientId);
       if (analyseNotes.trim()) fd.append("notes", analyseNotes.trim());
 
-      const res = await fetch("http://localhost:5000/api/analyses/upload", {
+      const res = await fetch(`${API_URL}/api/analyses/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,

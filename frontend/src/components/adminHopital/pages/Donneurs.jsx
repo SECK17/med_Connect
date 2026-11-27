@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Users, Search, Droplets, Phone, Mail, MapPin } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const GROUPES = ["Tous","A+","A-","B+","B-","AB+","AB-","O+","O-"];
 const GROUPE_COLOR = { "A+":"rose","A-":"rose","B+":"blue","B-":"blue","AB+":"violet","AB-":"violet","O+":"emerald","O-":"emerald" };
@@ -13,7 +14,7 @@ export default function AdminHopitalDonneurs() {
   const token = sessionStorage.getItem("token");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin-hopital/donneurs", {
+    fetch(`${API_URL}/api/admin-hopital/donneurs`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])

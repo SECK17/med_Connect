@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, ArrowLeft, Trash2, Pencil, Check, X } from "lucide-react";
 import { io } from "socket.io-client";
+import { API_URL } from "../../config.js";
 
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = API_URL;
 
 const COLORS = [
   "bg-blue-500","bg-emerald-500","bg-violet-500","bg-orange-500",

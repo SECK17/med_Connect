@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from "../config.js";
 
-const API = 'http://localhost:5000';
+const API = API_URL;
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);

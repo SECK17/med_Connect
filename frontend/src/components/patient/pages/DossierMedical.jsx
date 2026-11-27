@@ -8,8 +8,9 @@ import {
   Stethoscope, MapPin, ClipboardList,
   Share2, UserCheck, Trash2, Plus, X, Loader2,
 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
-const API = "http://localhost:5000";
+const API = API_URL;
 
 export default function DossierMedical() {
   const location = useLocation();

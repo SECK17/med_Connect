@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ClipboardList, Plus, Search, X, CheckCircle2, User, CalendarDays } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white";
 
@@ -19,7 +20,7 @@ export default function MedecinConsultations() {
 
   const load = () => {
     setLoading(true);
-    fetch(`http://localhost:5000/api/consultations/medecin/${userId}`, {
+    fetch(`${API_URL}/api/consultations/medecin/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
@@ -29,7 +30,7 @@ export default function MedecinConsultations() {
 
   useEffect(() => {
     load();
-    fetch(`http://localhost:5000/api/rendezvous/medecin/${userId}`, {
+    fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
@@ -55,7 +56,7 @@ export default function MedecinConsultations() {
     if (!form.patient_id) return showToast("Sélectionnez un patient.", "error");
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:5000/api/consultations", {
+      const res = await fetch(`${API_URL}/api/consultations`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),

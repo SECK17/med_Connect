@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../config.js";
 
 const ROLE_LABELS = {
   patient: "Patient",
@@ -36,7 +37,7 @@ export default function Dashboard() {
   const fetchUsers = async () => {
     try {
       const token = sessionStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/auth/users", {
+      const res = await fetch(`${API_URL}/api/auth/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -67,7 +68,7 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/auth/users/${userId}`, {
+      const res = await fetch(`${API_URL}/api/auth/users/${userId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

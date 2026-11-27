@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Users, Bell, Building2, Droplets, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { API_URL } from "../../../config.js";
 
 const URGENCE_CFG = {
   Critique: { bg: "bg-red-100",    text: "text-red-700",    border: "border-red-200",    dot: "bg-red-500"    },
@@ -19,9 +20,9 @@ export default function AdminHopitalAccueil() {
 
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:5000/api/admin-hopital/me",      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null),
-      fetch("http://localhost:5000/api/alertes-sang/moi",      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
-      fetch("http://localhost:5000/api/admin-hopital/donneurs", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      fetch(`${API_URL}/api/admin-hopital/me`,      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_URL}/api/alertes-sang/moi`,      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
+      fetch(`${API_URL}/api/admin-hopital/donneurs`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : []),
     ]).then(([hop, al, don]) => {
       setHopital(hop);
       setAlertes(al);

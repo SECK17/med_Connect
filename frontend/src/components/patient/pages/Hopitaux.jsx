@@ -6,6 +6,7 @@ import {
   Search, Navigation, MapPin, X, Loader2, ChevronDown, SlidersHorizontal,
 } from "lucide-react";
 import L from "leaflet";
+import { API_URL } from "../../../config.js";
 
 /* ── Palette ────────────────────────────────────────────────────── */
 const BLUE = "#2563EB";
@@ -277,7 +278,7 @@ export default function Hopitaux() {
     const run = async () => {
       try {
         if (token) {
-          const r = await fetch("http://localhost:5000/api/hopitaux", { headers: { Authorization: `Bearer ${token}` } });
+          const r = await fetch(`${API_URL}/api/hopitaux`, { headers: { Authorization: `Bearer ${token}` } });
           if (r.ok) {
             const api = await r.json();
             const noms = api.map(h => h.nom);

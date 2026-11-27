@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { User, Stethoscope, Droplets, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Heart, Loader2, Shield } from "lucide-react";
+import { API_URL } from "../../config.js";
 
 const ROLES = [
   { value: "patient", label: "Patient",        icon: User,        desc: "Prenez des rendez-vous et gérez votre santé" },
@@ -55,7 +56,7 @@ export default function Register() {
     try {
       const body = { role, ...form };
       delete body.confirm;
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

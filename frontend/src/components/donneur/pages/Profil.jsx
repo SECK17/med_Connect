@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { User, Mail, Phone, MapPin, Droplets, ToggleLeft, ToggleRight, CheckCircle2, Navigation, Loader2 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 export default function DonneurProfil() {
   const [profil,    setProfil]    = useState(null);
@@ -18,7 +19,7 @@ export default function DonneurProfil() {
 
   useEffect(() => {
     if (!token || !userId) { setLoading(false); return; }
-    fetch(`http://localhost:5000/api/patients/${userId}`, {
+    fetch(`${API_URL}/api/patients/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
@@ -31,7 +32,7 @@ export default function DonneurProfil() {
       })
       .catch(() => setLoading(false));
 
-    fetch("http://localhost:5000/api/donneur/profil", {
+    fetch(`${API_URL}/api/donneur/profil`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
@@ -45,7 +46,7 @@ export default function DonneurProfil() {
     navigator.geolocation.getCurrentPosition(
       async ({ coords: c }) => {
         setCoords({ lat: c.latitude, lng: c.longitude });
-        await fetch("http://localhost:5000/api/donneur/localisation", {
+        await fetch(`${API_URL}/api/donneur/localisation`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ latitude: c.latitude, longitude: c.longitude }),
@@ -61,7 +62,7 @@ export default function DonneurProfil() {
   const toggleDispo = async () => {
     const newDispo = !dispo;
     setDispo(newDispo);
-    await fetch("http://localhost:5000/api/donneur/disponibilite", {
+    await fetch(`${API_URL}/api/donneur/disponibilite`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {});

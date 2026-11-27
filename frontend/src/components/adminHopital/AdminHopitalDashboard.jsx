@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { LayoutDashboard, Users, Bell, User, LogOut, Heart, Menu, X, Building2, Stethoscope, CalendarDays, UserRound, CheckCircle2 } from "lucide-react";
+import { API_URL } from "../../config.js";
 
 const NAV = [
   { to: "accueil",     label: "Tableau de bord", icon: LayoutDashboard },
@@ -42,7 +43,7 @@ export default function AdminHopitalDashboard() {
 
   useEffect(() => {
     if (!token || sessionStorage.getItem("role") !== "admin_hopital") { navigate("/login"); return; }
-    fetch("http://localhost:5000/api/admin-hopital/me", {
+    fetch(`${API_URL}/api/admin-hopital/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)

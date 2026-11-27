@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Building2, Star, ChevronDown, MapPin, Stethoscope, CalendarPlus, Users } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const HOPITAUX_DAKAR = [
   "Hôpital Principal de Dakar",
@@ -50,7 +51,7 @@ export default function Medecins() {
 
   const fetchMedecins = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/medecins", {
+      const res = await fetch(`${API_URL}/api/medecins`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {

@@ -5,6 +5,7 @@ import {
   Pencil, Camera, Lock, CheckCircle2, AlertCircle, Loader2,
   Upload, FileText, X, AlertTriangle,
 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const HOPITAUX = [
   "Hôpital Principal de Dakar",
@@ -60,7 +61,7 @@ export default function MedecinProfil() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/medecins/${userId}`, {
+        const res = await fetch(`${API_URL}/api/medecins/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -82,7 +83,7 @@ export default function MedecinProfil() {
 
       // Charger la demande en attente depuis le backend
       try {
-        const rDem = await fetch("http://localhost:5000/api/demandes-hopital/moi", {
+        const rDem = await fetch(`${API_URL}/api/demandes-hopital/moi`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (rDem.ok) {
@@ -112,7 +113,7 @@ export default function MedecinProfil() {
     setError(""); setSaving(true);
     try {
       const { anneeDebutPratique, ...rest } = draft;
-      const res = await fetch(`http://localhost:5000/api/medecins/${userId}`, {
+      const res = await fetch(`${API_URL}/api/medecins/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...rest, experience: anneeDebutPratique }),
@@ -163,7 +164,7 @@ export default function MedecinProfil() {
       fd.append("hopital_demande", newHopital);
       fd.append("justificatif",    hopitalFile);
 
-      const res = await fetch("http://localhost:5000/api/demandes-hopital", {
+      const res = await fetch(`${API_URL}/api/demandes-hopital`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -185,7 +186,7 @@ export default function MedecinProfil() {
 
   const annulerDemandeHopital = async () => {
     try {
-      await fetch("http://localhost:5000/api/demandes-hopital/moi", {
+      await fetch(`${API_URL}/api/demandes-hopital/moi`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

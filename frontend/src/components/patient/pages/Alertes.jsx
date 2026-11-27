@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Info, CheckCircle2, AlertTriangle, XCircle, X, CheckCheck } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 
 const TYPE_CONFIG = {
@@ -29,7 +30,7 @@ export default function Alertes() {
       // Notifs générées depuis les vrais RDV
       let rdvNotifs = [];
       try {
-        const res = await fetch(`http://localhost:5000/api/rendezvous/patient/${userId}`, {
+        const res = await fetch(`${API_URL}/api/rendezvous/patient/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

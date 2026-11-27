@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { User, Mail, Phone, Droplets, FileText, CalendarDays, CheckCircle2, XCircle, X, Bell } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const STATUT_BADGE = {
   transfere:  "bg-blue-100 text-blue-700",
@@ -44,7 +45,7 @@ export default function DemandesRDV() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/rendezvous/medecin/${userId}`, {
+      const res = await fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -87,7 +88,7 @@ export default function DemandesRDV() {
     const dateFormatee = new Date(form.date).toLocaleDateString("fr-FR");
 
     try {
-      const res = await fetch(`http://localhost:5000/api/rendezvous/${rdvId}`, {
+      const res = await fetch(`${API_URL}/api/rendezvous/${rdvId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ date_rdv: form.date, heure: form.heure, statut: "confirme" }),
@@ -116,7 +117,7 @@ export default function DemandesRDV() {
     const rdv = demandes.find(r => r.id === rdvId);
     const nomPatient = rdv?.patient?.user?.nom || "ce patient";
     try {
-      const res = await fetch(`http://localhost:5000/api/rendezvous/${rdvId}`, {
+      const res = await fetch(`${API_URL}/api/rendezvous/${rdvId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ statut: "annule" }),

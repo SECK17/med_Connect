@@ -8,8 +8,9 @@ import {
   Heart, Shield, Droplets, Activity, BookOpen,
   Stethoscope, MapPin, ClipboardList, Save,
 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
-const API = "http://localhost:5000";
+const API = API_URL;
 const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
 export default function DossierPatient() {

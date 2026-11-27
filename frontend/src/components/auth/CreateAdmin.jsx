@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { User, Mail, Phone, Lock, ShieldCheck, AlertCircle, Loader2, Heart } from "lucide-react";
+import { API_URL } from "../../config.js";
 
 const INPUT = "w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl text-[14px] bg-gray-50 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-colors";
 
@@ -22,7 +23,7 @@ export default function CreateAdmin() {
       const headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`http://localhost:5000${endpoint}`, {
+      const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST", headers,
         body: JSON.stringify(form),
       });

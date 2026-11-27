@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Calendar, Clock, X, CheckCircle2, AlertCircle, Stethoscope, Building2, History, MessageSquare, Star } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const STATUS_STYLE = {
   "En attente": { cls: "bg-amber-100 text-amber-800",     icon: AlertCircle,    iconCls: "text-amber-500"   },
@@ -46,7 +47,7 @@ export default function RendezVous() {
     fetchMedecins();
     // Charger mes évaluations déjà soumises
     if (token) {
-      fetch("http://localhost:5000/api/evaluations/patient/moi", {
+      fetch(`${API_URL}/api/evaluations/patient/moi`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : [])
@@ -73,7 +74,7 @@ export default function RendezVous() {
   const fetchFromAPI = async () => {
     if (!token || !userId) { setLoading(false); return; }
     try {
-      const res = await fetch(`http://localhost:5000/api/rendezvous/patient/${userId}`, {
+      const res = await fetch(`${API_URL}/api/rendezvous/patient/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -123,7 +124,7 @@ export default function RendezVous() {
 
   const fetchMedecins = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/medecins", {
+      const res = await fetch(`${API_URL}/api/medecins`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) setMedecins(await res.json());
@@ -148,7 +149,7 @@ export default function RendezVous() {
 
     if (token && userId) {
       try {
-        const res = await fetch("http://localhost:5000/api/rendezvous", {
+        const res = await fetch(`${API_URL}/api/rendezvous`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
@@ -179,7 +180,7 @@ export default function RendezVous() {
     seen[String(id)] = "annule";
     localStorage.setItem("medconnect_patient_rdv_seen", JSON.stringify(seen));
     if (token) {
-      fetch(`http://localhost:5000/api/rendezvous/${id}`, {
+      fetch(`${API_URL}/api/rendezvous/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ statut: "annule" }),
@@ -190,7 +191,7 @@ export default function RendezVous() {
   const submitEval = async () => {
     if (!evalNote || !evalModal) return;
     try {
-      await fetch("http://localhost:5000/api/evaluations", {
+      await fetch(`${API_URL}/api/evaluations`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ medecin_id: evalModal.doctorId, rdv_id: evalModal.rdvId, note: evalNote }),

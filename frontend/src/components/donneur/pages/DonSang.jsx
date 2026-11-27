@@ -4,6 +4,7 @@ import {
   Droplets, Bell, CheckCircle2, AlertTriangle, Heart,
   ChevronDown, ChevronUp, Info, Loader2, Phone, MapPin, X, Building2, Navigation,
 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const URGENCE_CFG = {
   Critique: { bg: "bg-red-100",    text: "text-red-700",    border: "border-red-200",    dot: "bg-red-500",    label: "CRITIQUE" },
@@ -38,17 +39,17 @@ export default function DonneurDonSang() {
   const token  = sessionStorage.getItem("token");
 
   const fetchAlertes = () =>
-    fetch("http://localhost:5000/api/alertes-sang/donneur", {
+    fetch(`${API_URL}/api/alertes-sang/donneur`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then(r => r.ok ? r.json() : []).catch(() => []);
 
   useEffect(() => {
     Promise.all([
       fetchAlertes(),
-      fetch("http://localhost:5000/api/donneur/profil", {
+      fetch(`${API_URL}/api/donneur/profil`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch("http://localhost:5000/api/alertes-sang/mes-reponses", {
+      fetch(`${API_URL}/api/alertes-sang/mes-reponses`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([al, pr, rep]) => {
@@ -68,7 +69,7 @@ export default function DonneurDonSang() {
 
   const repondre = async (alerte) => {
     // Enregistrer la réponse côté backend (traçabilité)
-    fetch(`http://localhost:5000/api/alertes-sang/${alerte.id}/repondre`, {
+    fetch(`${API_URL}/api/alertes-sang/${alerte.id}/repondre`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     }).catch(() => {});

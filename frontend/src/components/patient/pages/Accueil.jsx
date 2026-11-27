@@ -6,6 +6,7 @@ import {
   Droplets, Users, Plus, FolderOpen, ChevronDown, ChevronUp,
   Pill, Sparkles, Activity, Download, Heart, Shield,
 } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const STATS = [
   { key: "rdv",      label: "Rendez-vous", icon: Calendar,    bg: "bg-emerald-50", border: "border-emerald-100", ico: "bg-emerald-100 text-emerald-600", num: "text-emerald-700", to: "rendezvous", state: {} },
@@ -44,7 +45,7 @@ export default function Accueil() {
     setAppointments(JSON.parse(localStorage.getItem("medconnect_appointments") || "[]"));
 
     if (token && userId) {
-      fetch(`http://localhost:5000/api/rendezvous/patient/${userId}`, {
+      fetch(`${API_URL}/api/rendezvous/patient/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : [])
@@ -64,14 +65,14 @@ export default function Accueil() {
         .catch(() => {})
         .finally(() => setLoading(false));
 
-      fetch(`http://localhost:5000/api/ordonnances/patient/${userId}`, {
+      fetch(`${API_URL}/api/ordonnances/patient/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : [])
         .then(setPrescriptions)
         .catch(() => {});
 
-      fetch("http://localhost:5000/api/donneur/dashboard", {
+      fetch(`${API_URL}/api/donneur/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : null)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { CalendarDays, CheckCircle2, Clock, X, Search, User, ArrowRight } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const STATUT_CFG = {
   en_attente: { label: "En attente",  bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   icon: Clock        },
@@ -20,7 +21,7 @@ export default function AdminHopitalRendezVous() {
 
   const load = () => {
     setLoading(true);
-    fetch("http://localhost:5000/api/admin-hopital/rendez-vous", {
+    fetch(`${API_URL}/api/admin-hopital/rendez-vous`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
@@ -62,7 +63,7 @@ export default function AdminHopitalRendezVous() {
   const transferer = async (id) => {
     setActing(id + "transfere");
     try {
-      const res = await fetch(`http://localhost:5000/api/admin-hopital/rendez-vous/${id}/transferer`, {
+      const res = await fetch(`${API_URL}/api/admin-hopital/rendez-vous/${id}/transferer`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -76,7 +77,7 @@ export default function AdminHopitalRendezVous() {
   const annuler = async (id) => {
     setActing(id + "annule");
     try {
-      const res = await fetch(`http://localhost:5000/api/admin-hopital/rendez-vous/${id}`, {
+      const res = await fetch(`${API_URL}/api/admin-hopital/rendez-vous/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ statut: "annule" }),

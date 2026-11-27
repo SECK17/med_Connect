@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Stethoscope, Search, CheckCircle2, Clock, Phone, Mail, X } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 export default function AdminHopitalMedecins() {
   const [medecins, setMedecins] = useState([]);
@@ -12,7 +13,7 @@ export default function AdminHopitalMedecins() {
 
   const load = () => {
     setLoading(true);
-    fetch("http://localhost:5000/api/admin-hopital/medecins", {
+    fetch(`${API_URL}/api/admin-hopital/medecins`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
@@ -30,7 +31,7 @@ export default function AdminHopitalMedecins() {
   const action = async (medecinId, route) => {
     setActing(medecinId + route);
     try {
-      const res = await fetch(`http://localhost:5000/api/admin-hopital/medecins/${medecinId}/${route}`, {
+      const res = await fetch(`${API_URL}/api/admin-hopital/medecins/${medecinId}/${route}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });

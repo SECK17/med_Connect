@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { User, Mail, Phone, MapPin, Calendar, Droplets, Pencil, Save, X, Camera, Lock, ShieldAlert, Plus } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const DEFAULT_PROFILE = {
   name: "", email: "", phone: "", address: "", dob: "",
@@ -37,7 +38,7 @@ export default function Profil() {
     if (savedPhoto) setPhoto(savedPhoto);
 
     if (token && userId) {
-      fetch(`http://localhost:5000/api/patients/${userId}`, {
+      fetch(`${API_URL}/api/patients/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(r => r.ok ? r.json() : null)
@@ -73,7 +74,7 @@ export default function Profil() {
     sessionStorage.setItem("email", draft.email);
 
     if (token && userId) {
-      fetch(`http://localhost:5000/api/patients/${userId}`, {
+      fetch(`${API_URL}/api/patients/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Droplets, Bell, Heart, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { API_URL } from "../../../config.js";
 
 const COMPATIBILITE = {
   "O-":  { donneA: ["O-","O+","A-","A+","B-","B+","AB-","AB+"], label: "Donneur universel" },
@@ -25,9 +26,9 @@ export default function DonneurAccueil() {
 
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:5000/api/donneur/profil",       { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API_URL}/api/donneur/profil`,       { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch("http://localhost:5000/api/alertes-sang/donneur", { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${API_URL}/api/alertes-sang/donneur`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : []).catch(() => []),
     ]).then(([pr, al]) => {
       setProfil(pr);
