@@ -6,6 +6,7 @@ import {
   Upload, FileText, X, AlertTriangle,
 } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import DeconnexionPartout from "../../DeconnexionPartout.jsx";
 
 const HOPITAUX = [
   "Hôpital Principal de Dakar",
@@ -601,6 +602,9 @@ export default function MedecinProfil() {
         </div>
       </div>
 
+
+      {/* Déconnexion de tous les appareils */}
+      <DeconnexionPartout />
     </div>
   );
 }

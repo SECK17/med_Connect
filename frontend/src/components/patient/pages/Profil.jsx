@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { User, Mail, Phone, MapPin, Calendar, Droplets, Pencil, Save, X, Camera, Lock, ShieldAlert, Plus } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import DeconnexionPartout from "../../DeconnexionPartout.jsx";
 
 const DEFAULT_PROFILE = {
   name: "", email: "", phone: "", address: "", dob: "",
@@ -344,6 +345,9 @@ export default function Profil() {
           </button>
         </div>
       </div>
+
+      {/* Déconnexion de tous les appareils */}
+      <DeconnexionPartout />
     </div>
   );
 }

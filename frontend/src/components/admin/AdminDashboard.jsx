@@ -1,21 +1,24 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "motion/react";
-import { Heart, LogOut, ShieldCheck, AlertCircle } from "lucide-react";
+import { Heart, LogOut, ShieldCheck, ShieldAlert, AlertCircle } from "lucide-react";
 
 import { deconnexion } from "../../auth.js";
+import useDeconnexionPartout from "../../hooks/useDeconnexionPartout.js";
 import { NAV, DAYS_FR, MONTHS_FR } from "./constantes.js";
 import useToast from "./hooks/useToast";
 import useUtilisateurs from "./hooks/useUtilisateurs";
 import useHopitaux from "./hooks/useHopitaux";
 import useAlertesSang from "./hooks/useAlertesSang";
 import useDemandes from "./hooks/useDemandes";
+import useJournal from "./hooks/useJournal";
 import VueEnsemble from "./sections/VueEnsemble";
 import Utilisateurs from "./sections/Utilisateurs";
 import Validations from "./sections/Validations";
 import Hopitaux from "./sections/Hopitaux";
 import DonSang from "./sections/DonSang";
 import Demandes from "./sections/Demandes";
+import JournalAcces from "./sections/JournalAcces";
 import Toast from "./modales/Toast";
 import ModaleHopital from "./modales/ModaleHopital";
 import ModaleRejetDemande from "./modales/ModaleRejetDemande";
@@ -25,6 +28,7 @@ import ModaleSuppressionCompte from "./modales/ModaleSuppressionCompte";
 /* ── Composant principal ───────────────────────────────────── */
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { enCours: deconnexionEnCours, deconnecterPartout } = useDeconnexionPartout();
 
   const [section, setSection]         = useState("overview");
   const [time, setTime]               = useState(new Date());
@@ -42,6 +46,8 @@ export default function AdminDashboard() {
   const { fetchAllAlertes } = etatAlertes;
   const etatDemandes = useDemandes({ token, showToast });
   const { fetchDemandes, demandeFilter, demandes } = etatDemandes;
+  // Journal des accès aux dossiers : chargé seulement quand la section est affichée
+  const etatJournal = useJournal({ token, actif: section === "journal" });
 
   /* horloge en temps réel */
   useEffect(() => {
@@ -161,6 +167,16 @@ export default function AdminDashboard() {
               </div>
             </div>
             <button
+              onClick={() => {
+                if (window.confirm("Déconnecter tous vos appareils ? Toutes vos sessions seront fermées, y compris celle-ci.")) deconnecterPartout();
+              }}
+              disabled={deconnexionEnCours}
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-7 h-7 rounded-lg flex items-center justify-center text-indigo-400 hover:bg-red-500/20 hover:text-red-400"
+              title="Déconnecter tous mes appareils"
+            >
+              <ShieldAlert size={13} />
+            </button>
+            <button
               onClick={async () => { await deconnexion(); navigate("/login"); }}
               className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-7 h-7 rounded-lg flex items-center justify-center text-indigo-400 hover:bg-red-500/20 hover:text-red-400"
               title="Déconnexion"
@@ -255,6 +271,10 @@ export default function AdminDashboard() {
             ──────────────────────────────── */}
             {section === "demandes" && (
               <Demandes key="demandes" {...etatDemandes} />
+            )}
+
+            {section === "journal" && (
+              <JournalAcces key="journal" {...etatJournal} users={etatUtilisateurs.users} />
             )}
 
           </AnimatePresence>

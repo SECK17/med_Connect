@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { User, Building2, Mail, Phone, ShieldCheck, Droplets } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import DeconnexionPartout from "../../DeconnexionPartout.jsx";
 
 export default function AdminHopitalProfil() {
   const [profil,  setProfil]  = useState(null);
@@ -120,6 +121,9 @@ export default function AdminHopitalProfil() {
           </motion.div>
         </>
       )}
+
+      {/* Déconnexion de tous les appareils */}
+      <DeconnexionPartout />
     </div>
   );
 }

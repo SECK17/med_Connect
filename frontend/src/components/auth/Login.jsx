@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
-import { Mail, Lock, LogIn, AlertCircle, Clock, Heart, Stethoscope, Shield } from "lucide-react";
+import { Mail, Lock, LogIn, AlertCircle, Clock, Heart, Stethoscope, Shield, Info } from "lucide-react";
 import { API_URL } from "../../config.js";
 
 export default function Login() {
@@ -12,6 +12,8 @@ export default function Login() {
   const [nonVerifie, setNonVerifie] = useState(false);
   const [renvoi, setRenvoi]   = useState(""); // message après renvoi du lien
   const navigate = useNavigate();
+  // Message transmis par la page précédente (ex. « déconnecté de tous vos appareils »)
+  const messageInfo = useLocation().state?.message;
 
   const renvoyerLien = async () => {
     setRenvoi("");
@@ -127,6 +129,14 @@ export default function Login() {
 
           <h2 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Connexion</h2>
           <p className="text-gray-400 text-sm mb-8">Accédez à votre espace santé</p>
+
+          {/* Information (après une redirection) */}
+          {messageInfo && !error && (
+            <div className="flex items-start gap-3 px-4 py-3 rounded-xl mb-6 text-[13px] border bg-blue-50 border-blue-200 text-blue-800">
+              <Info size={16} className="flex-shrink-0 mt-0.5" />
+              <div className="font-medium">{messageInfo}</div>
+            </div>
+          )}
 
           {/* Erreur */}
           {error && (

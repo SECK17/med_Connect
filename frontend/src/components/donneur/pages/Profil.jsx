@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { User, Mail, Phone, MapPin, Droplets, ToggleLeft, ToggleRight, CheckCircle2, Navigation, Loader2 } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import DeconnexionPartout from "../../DeconnexionPartout.jsx";
 
 export default function DonneurProfil() {
   const [profil,    setProfil]    = useState(null);
@@ -185,6 +186,9 @@ export default function DonneurProfil() {
           Un intervalle de <strong>56 jours</strong> est recommandé entre deux dons de sang total.
         </div>
       </div>
+
+      {/* Déconnexion de tous les appareils */}
+      <DeconnexionPartout />
     </div>
   );
 }
