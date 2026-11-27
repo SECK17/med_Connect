@@ -1,5 +1,5 @@
 // Constantes de l'espace administrateur (menu, rôles, état des services, dates).
-import { Users, Heart, LayoutDashboard, UserCheck, Server, Database, Wifi, Building2, ArrowRightLeft } from "lucide-react";
+import { Users, Heart, LayoutDashboard, UserCheck, Server, Database, Wifi, Building2, ArrowRightLeft, ShieldCheck } from "lucide-react";
 
 export const NAV = [
   { key: "overview",    label: "Vue d'ensemble",   icon: LayoutDashboard },
@@ -8,6 +8,7 @@ export const NAV = [
   { key: "hopitaux",    label: "Hôpitaux",         icon: Building2 },
   { key: "demandes",    label: "Demandes hôpital", icon: ArrowRightLeft, badge: "demandes" },
   { key: "don_sang",    label: "Don de sang",      icon: Heart },
+  { key: "journal",     label: "Journal d'accès",  icon: ShieldCheck },
 ];
 
 export const ROLE_CFG = {
