@@ -15,6 +15,8 @@ const Message            = require('./Message');
 const PushSubscription   = require('./PushSubscription');
 const Evaluation         = require('./Evaluation');
 const DonneurReponse     = require('./DonneurReponse');
+const RefreshToken       = require('./RefreshToken');
+const JournalAcces       = require('./JournalAcces');
 
 /**
  * Définition des relations entre les modèles
@@ -118,50 +120,10 @@ DemandeHopital.belongsTo(User, { foreignKey: 'medecin_id', as: 'medecin' });
 User.hasMany(DemandeHopital,   { foreignKey: 'medecin_id', as: 'demandes_hopital' });
 
 // DonneurReponse — traçabilité des réponses aux alertes
-DonneurReponse.belongsTo(AlerteSang, { foreignKey: 'alerte_id',  as: 'alerte'  });
-DonneurReponse.belongsTo(User,       { foreignKey: 'donneur_id', as: 'donneur' });
-AlerteSang.hasMany(DonneurReponse,   { foreignKey: 'alerte_id',  as: 'reponses' });
-
-/**
- * Synchronisation des modèles avec la base de données
- */
-const syncDatabase = async () => {
-  // Convertir les colonnes ENUM → VARCHAR pour éviter les restrictions PostgreSQL
-  try {
-    await sequelize.query(
-      `ALTER TABLE "users" ALTER COLUMN "role" TYPE VARCHAR(50) USING "role"::text`
-    );
-  } catch (_) {}
-  try {
-    await sequelize.query(
-      `ALTER TABLE "rendez_vous" ALTER COLUMN "statut" TYPE VARCHAR(30) USING "statut"::text`
-    );
-  } catch (_) {}
-
-  // Sync par modèle dans l'ordre des dépendances FK
-  // Chaque erreur est loguée sans bloquer les suivants
-  const ordered = [
-    User, Patient, Medecin, Hopital,
-    AdminHopital, AlerteSang, DemandeHopital,
-    RendezVous, Ordonnance, Analyse, Consultation, DossierPartage, Message, PushSubscription, Evaluation, DonneurReponse,
-  ];
-
-  let errors = 0;
-  for (const model of ordered) {
-    try {
-      await model.sync({ alter: true });
-    } catch (e) {
-      errors++;
-      console.warn(`[sync] ${model.getTableName()} : ${e.message}`);
-    }
-  }
-
-  if (errors === 0) {
-    console.log('Modèles synchronisés avec la base de données ✓');
-  } else {
-    console.log(`Modèles synchronisés avec ${errors} avertissement(s) ✓`);
-  }
-};
+// (suppression en cascade avec l'alerte ou le compte — migration 20261127150041)
+DonneurReponse.belongsTo(AlerteSang, { foreignKey: 'alerte_id',  as: 'alerte',  onDelete: 'CASCADE' });
+DonneurReponse.belongsTo(User,       { foreignKey: 'donneur_id', as: 'donneur', onDelete: 'CASCADE' });
+AlerteSang.hasMany(DonneurReponse,   { foreignKey: 'alerte_id',  as: 'reponses', onDelete: 'CASCADE' });
 
 module.exports = {
   sequelize,
@@ -181,6 +143,7 @@ module.exports = {
   PushSubscription,
   Evaluation,
   DonneurReponse,
-  syncDatabase,
+  RefreshToken,
+  JournalAcces,
 };
 
