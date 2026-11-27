@@ -22,7 +22,7 @@ const Consultation = sequelize.define('Consultation', {
   rdv_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    references: { model: 'rendezvous', key: 'id' },
+    references: { model: 'rendez_vous', key: 'id' },
     onDelete: 'SET NULL',
   },
   date: {

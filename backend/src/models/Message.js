@@ -15,6 +15,11 @@ const Message = sequelize.define('Message', {
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: false,
+  // Index pour l'historique d'une conversation et le compteur de non-lus
+  indexes: [
+    { fields: ['expediteur_id', 'destinataire_id', 'created_at'] },
+    { fields: ['destinataire_id', 'lu'] },
+  ],
 });
 
 module.exports = Message;
