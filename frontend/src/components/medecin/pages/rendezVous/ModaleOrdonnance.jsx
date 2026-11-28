@@ -120,7 +120,7 @@ export default function ModaleOrdonnance({ prescModal, setPrescModal, setPrescMo
                 <div>
                   <label className="text-[13px] font-semibold text-gray-700 block mb-1.5">Notes / Conseils</label>
                   <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                    placeholder="Instructions particulières…"
+                    placeholder="Instructions particulières, contre-indications…"
                     rows={2} className={`${INPUT} resize-none`}
                   />
                 </div>

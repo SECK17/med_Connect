@@ -1,6 +1,7 @@
 // Partage du dossier avec des médecins : liste, recherche d'un médecin, ajout, révocation.
 import { useState } from "react";
 import { API_URL } from "../../../../config.js";
+import { signalerErreur } from "../../../../utils/erreurs.js";
 
 export default function usePartages({ userId, token }) {
   const [partages, setPartages]             = useState([]);
@@ -38,7 +39,7 @@ export default function usePartages({ userId, token }) {
         body: JSON.stringify({ medecin_id: medecinId }),
       });
       if (res.ok) { fetchPartages(); setShowModal(false); setPartageSearch(""); }
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setPartageLoading(false);
   };
 

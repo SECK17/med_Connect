@@ -28,6 +28,8 @@ const FAQ = [
 ];
 
 export default function DonneurDonSang() {
+  // Heure de référence pour savoir si une alerte est expirée (lue une fois, au chargement de la page)
+  const [maintenant] = useState(() => Date.now());
   const [alertes,      setAlertes]      = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [profil,       setProfil]       = useState(null);
@@ -286,7 +288,7 @@ export default function DonneurDonSang() {
           </div>
           <div className="divide-y divide-gray-50">
             {historique.map((r, i) => {
-              const estExpiree = r.expire_at && new Date(r.expire_at) < Date.now();
+              const estExpiree = r.expire_at && new Date(r.expire_at) < maintenant;
               const statutCfg = (r.statut === "active" && estExpiree)
                 ? { cls: "bg-amber-100 text-amber-700", label: "Expirée" }
                 : r.statut === "active"

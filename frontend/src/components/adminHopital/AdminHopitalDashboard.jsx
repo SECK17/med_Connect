@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { LayoutDashboard, Users, Bell, User, LogOut, Heart, Menu, X, Building2, Stethoscope, CalendarDays, UserRound, CheckCircle2 } from "lucide-react";
+import { LayoutDashboard, Users, Bell, LogOut, Heart, Menu, X, Building2, Stethoscope, CalendarDays, UserRound, CheckCircle2 } from "lucide-react";
 import { API_URL } from "../../config.js";
 
 import { deconnexion } from "../../auth.js";
@@ -14,11 +14,73 @@ const NAV = [
   { to: "alertes",     label: "Alertes sang",      icon: Bell },
 ];
 
+// Menu latéral (bureau et mobile) : défini hors du composant principal pour ne pas être recréé à chaque rendu.
+function SidebarContent({ hopitalNom, setMobile, initiales, nom, logout }) {
+  return (
+  <div className="flex flex-col h-full bg-white border-r border-gray-200">
+    <div className="px-5 py-5 flex items-center gap-3 border-b border-gray-100">
+      <div className="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-rose-200">
+        <Heart size={17} className="text-white" />
+      </div>
+      <div>
+        <div className="text-[14px] font-extrabold text-gray-900 tracking-tight">MedConnect</div>
+        <div className="text-[10px] text-rose-600 font-semibold">Admin Hôpital</div>
+      </div>
+    </div>
+
+    {hopitalNom && (
+      <div className="mx-3 mt-3 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 flex items-center gap-2">
+        <Building2 size={13} className="text-rose-500 flex-shrink-0" />
+        <span className="text-[11px] font-semibold text-rose-700 leading-tight line-clamp-2">{hopitalNom}</span>
+      </div>
+    )}
+
+    <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-2 mb-3">Menu</p>
+      {NAV.map(({ to, label, icon: Icon }) => (
+        <NavLink key={to} to={to} onClick={() => setMobile(false)}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
+            ${isActive ? "bg-rose-50 text-rose-700 border-l-[3px] border-rose-500" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? "bg-rose-100" : "bg-gray-100 group-hover:bg-gray-200"}`}>
+                <Icon size={14} className={isActive ? "text-rose-600" : "text-gray-400 group-hover:text-gray-600"} />
+              </div>
+              <span>{label}</span>
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+
+    <div className="px-3 py-4 border-t border-gray-100">
+      <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+        <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center text-[12px] font-bold flex-shrink-0">
+          {initiales}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-bold text-gray-900 truncate">{nom}</div>
+          <div className="text-[10px] text-gray-400">Admin hôpital</div>
+        </div>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={logout}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+        >
+          <LogOut size={14} />
+        </motion.button>
+      </div>
+    </div>
+  </div>
+  );
+}
+
 export default function AdminHopitalDashboard() {
   const navigate = useNavigate();
   const [mobile,     setMobile]     = useState(false);
   const [hopitalNom, setHopitalNom] = useState("");
-  const [notifs,     setNotifs]     = useState([]);
+  const [notifs,     setNotifs]     = useState(() => JSON.parse(localStorage.getItem("medconnect_secretaire_notifications") || "[]")); // lues dès le premier affichage
   const [showNotifs, setShowNotifs] = useState(false);
   const nom     = sessionStorage.getItem("nom") || "Admin";
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
@@ -50,69 +112,9 @@ export default function AdminHopitalDashboard() {
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.hopital_nom) setHopitalNom(d.hopital_nom); })
       .catch(() => {});
-    loadNotifs();
   }, []);
 
   const logout = async () => { await deconnexion(); navigate("/login"); };
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-rose-200">
-          <Heart size={17} className="text-white" />
-        </div>
-        <div>
-          <div className="text-[14px] font-extrabold text-gray-900 tracking-tight">MedConnect</div>
-          <div className="text-[10px] text-rose-600 font-semibold">Admin Hôpital</div>
-        </div>
-      </div>
-
-      {hopitalNom && (
-        <div className="mx-3 mt-3 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 flex items-center gap-2">
-          <Building2 size={13} className="text-rose-500 flex-shrink-0" />
-          <span className="text-[11px] font-semibold text-rose-700 leading-tight line-clamp-2">{hopitalNom}</span>
-        </div>
-      )}
-
-      <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-2 mb-3">Menu</p>
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} onClick={() => setMobile(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
-              ${isActive ? "bg-rose-50 text-rose-700 border-l-[3px] border-rose-500" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? "bg-rose-100" : "bg-gray-100 group-hover:bg-gray-200"}`}>
-                  <Icon size={14} className={isActive ? "text-rose-600" : "text-gray-400 group-hover:text-gray-600"} />
-                </div>
-                <span>{label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="px-3 py-4 border-t border-gray-100">
-        <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
-          <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center text-[12px] font-bold flex-shrink-0">
-            {initiales}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-bold text-gray-900 truncate">{nom}</div>
-            <div className="text-[10px] text-gray-400">Admin hôpital</div>
-          </div>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={logout}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-          >
-            <LogOut size={14} />
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -125,7 +127,7 @@ export default function AdminHopitalDashboard() {
       </AnimatePresence>
 
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-[230px] z-50 shadow-sm">
-        <SidebarContent />
+        <SidebarContent hopitalNom={hopitalNom} setMobile={setMobile} initiales={initiales} nom={nom} logout={logout} />
       </aside>
 
       <AnimatePresence>
@@ -138,7 +140,7 @@ export default function AdminHopitalDashboard() {
               className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center">
               <X size={14} />
             </button>
-            <SidebarContent />
+            <SidebarContent hopitalNom={hopitalNom} setMobile={setMobile} initiales={initiales} nom={nom} logout={logout} />
           </motion.aside>
         )}
       </AnimatePresence>

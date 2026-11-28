@@ -4,6 +4,7 @@ import { MessageSquare, Search } from "lucide-react";
 import { io } from "socket.io-client";
 import ChatWindow from "../../chat/ChatWindow";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 const SOCKET_URL = API_URL;
 
@@ -28,11 +29,12 @@ export default function Messages() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setConversations(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setLoading(false);
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
     fetchConversations();
 
     const socket = io(SOCKET_URL, { auth: (cb) => cb({ token: sessionStorage.getItem("token") }) }); // jeton relu à chaque reconnexion

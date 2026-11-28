@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Bell, Info, CheckCircle2, AlertTriangle, XCircle, X, CheckCheck } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 
 const TYPE_CONFIG = {
@@ -53,7 +54,7 @@ export default function Alertes() {
               };
             });
         }
-      } catch {}
+      } catch (err) { signalerErreur(err); }
 
       // Fusionner en dédupliquant par id
       const ids = new Set(manuelles.map(n => n.id));

@@ -1,6 +1,7 @@
 // Comptes utilisateurs : liste, filtres, validation, rejet et suppression, statistiques dérivées.
 import { useState } from "react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 export default function useUtilisateurs({ token, showToast }) {
   const [users, setUsers]             = useState([]);
@@ -17,7 +18,7 @@ export default function useUtilisateurs({ token, showToast }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setUsers(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     finally { setLoading(false); }
   };
 

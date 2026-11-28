@@ -6,9 +6,9 @@ import {
   Building2, Droplets, Bell, User, LogOut, Menu, X, Heart,
   CheckCircle2, MessageSquare, ShieldCheck,
 } from "lucide-react";
-import { API_URL } from "../../config.js";
 
 import { deconnexion } from "../../auth.js";
+import { compterNonLus } from "../../utils/messages.js";
 const NAV = [
   { to: "accueil",    icon: LayoutDashboard, label: "Tableau de bord" },
   { to: "rendezvous", icon: Calendar,        label: "Mes rendez-vous" },
@@ -22,10 +22,85 @@ const NAV = [
   { to: "profil",     icon: User,            label: "Mon profil" },
 ];
 
+// Menu latéral (bureau et mobile) : défini hors du composant principal pour ne pas être recréé à chaque rendu.
+function SidebarContent({ setSidebarOpen, fetchUnreadMsg, unreadMsg, initiales, nom, email, logout }) {
+  return (
+  <div className="flex flex-col h-full">
+
+    {/* Brand */}
+    <div className="px-5 py-5 flex items-center gap-3 border-b border-blue-600">
+      <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-md">
+        <Heart size={17} className="text-white" />
+      </div>
+      <div>
+        <div className="text-[15px] font-extrabold text-white tracking-tight">MedConnect</div>
+        <div className="text-[10px] text-blue-200 font-semibold">Espace Patient</div>
+      </div>
+    </div>
+
+    {/* Nav */}
+    <nav className="flex-1 py-4 overflow-y-auto px-3 space-y-0.5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-blue-300 px-2 mb-3">Menu</p>
+      {NAV.map(({ to, icon: Icon, label, badge }) => (
+        <NavLink
+          key={to}
+          to={to}
+          onClick={() => { setSidebarOpen(false); if (badge === "msg") fetchUnreadMsg(); }}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
+            ${isActive
+              ? "bg-white/20 text-white shadow-md shadow-blue-900/30"
+              : "text-blue-100 hover:bg-blue-600/70 hover:text-white"
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors
+                ${isActive ? "bg-white/25" : "bg-white/10 group-hover:bg-white/20"}`}
+              >
+                <Icon size={14} className={isActive ? "text-white" : "text-blue-200 group-hover:text-white"} />
+              </div>
+              <span className="flex-1">{label}</span>
+              {badge === "msg" && unreadMsg > 0 && (
+                <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                  {unreadMsg}
+                </span>
+              )}
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+
+    {/* Footer */}
+    <div className="px-3 py-4 border-t border-blue-600">
+      <div className="flex items-center gap-3 bg-blue-800/50 border border-blue-600/50 rounded-xl px-3 py-2.5">
+        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0">
+          {initiales}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-bold text-white truncate">{nom}</div>
+          <div className="text-[10px] text-blue-200 truncate">{email || "Patient"}</div>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={logout}
+          title="Se déconnecter"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-300 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+        >
+          <LogOut size={14} />
+        </motion.button>
+      </div>
+    </div>
+  </div>
+  );
+}
+
 export default function PatientLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifs,      setNotifs]      = useState([]);
+  const [notifs,      setNotifs]      = useState(() => JSON.parse(localStorage.getItem("medconnect_patient_notifications") || "[]")); // lues dès le premier affichage
   const [showNotifs,  setShowNotifs]  = useState(false);
   const nom      = sessionStorage.getItem("nom") || "Patient";
   const email    = sessionStorage.getItem("email") || "";
@@ -49,7 +124,6 @@ export default function PatientLayout() {
     setNotifs([]);
   };
 
-  useEffect(() => { loadNotifs(); }, []);
 
   // Précharge les tuiles CartoDB Dakar dès la connexion — même URL fixe que le TileLayer
   useEffect(() => {
@@ -63,95 +137,10 @@ export default function PatientLayout() {
 
   const [unreadMsg, setUnreadMsg] = useState(0);
 
-  const fetchUnreadMsg = async () => {
-    const token = sessionStorage.getItem("token");
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/api/messages/unread/count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) { const d = await res.json(); setUnreadMsg(d.count); }
-    } catch {}
-  };
+  const majNonLus = (n) => { if (n !== null) setUnreadMsg(n); };
+  const fetchUnreadMsg = () => compterNonLus().then(majNonLus);
 
-  useEffect(() => { fetchUnreadMsg(); }, []);
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-
-      {/* Brand */}
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-blue-600">
-        <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-md">
-          <Heart size={17} className="text-white" />
-        </div>
-        <div>
-          <div className="text-[15px] font-extrabold text-white tracking-tight">MedConnect</div>
-          <div className="text-[10px] text-blue-200 font-semibold">Espace Patient</div>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-4 overflow-y-auto px-3 space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-300 px-2 mb-3">Menu</p>
-        {NAV.map(({ to, icon: Icon, label, badge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={() => { setSidebarOpen(false); if (badge === "msg") fetchUnreadMsg(); }}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
-              ${isActive
-                ? "bg-white/20 text-white shadow-md shadow-blue-900/30"
-                : "text-blue-100 hover:bg-blue-600/70 hover:text-white"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors
-                  ${isActive ? "bg-white/25" : "bg-white/10 group-hover:bg-white/20"}`}
-                >
-                  <Icon size={14} className={isActive ? "text-white" : "text-blue-200 group-hover:text-white"} />
-                </div>
-                <span className="flex-1">{label}</span>
-                {badge === "msg" && unreadMsg > 0 && (
-                  <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                    {unreadMsg}
-                  </span>
-                )}
-                {to === "alertes" && false && (
-                  <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                    0
-                  </span>
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="px-3 py-4 border-t border-blue-600">
-        <div className="flex items-center gap-3 bg-blue-800/50 border border-blue-600/50 rounded-xl px-3 py-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0">
-            {initiales}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-bold text-white truncate">{nom}</div>
-            <div className="text-[10px] text-blue-200 truncate">{email || "Patient"}</div>
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={logout}
-            title="Se déconnecter"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-300 hover:bg-red-500/20 hover:text-red-300 transition-colors"
-          >
-            <LogOut size={14} />
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
+  useEffect(() => { compterNonLus().then(majNonLus); }, []);
 
   return (
     <div className="flex min-h-screen bg-blue-50">
@@ -169,7 +158,7 @@ export default function PatientLayout() {
 
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col fixed top-0 left-0 bottom-0 w-[230px] bg-blue-700 z-50 shadow-xl">
-        <SidebarContent />
+        <SidebarContent setSidebarOpen={setSidebarOpen} fetchUnreadMsg={fetchUnreadMsg} unreadMsg={unreadMsg} initiales={initiales} nom={nom} email={email} logout={logout} />
       </aside>
 
       {/* Sidebar mobile */}
@@ -186,7 +175,7 @@ export default function PatientLayout() {
             >
               <X size={14} />
             </button>
-            <SidebarContent />
+            <SidebarContent setSidebarOpen={setSidebarOpen} fetchUnreadMsg={fetchUnreadMsg} unreadMsg={unreadMsg} initiales={initiales} nom={nom} email={email} logout={logout} />
           </motion.aside>
         )}
       </AnimatePresence>

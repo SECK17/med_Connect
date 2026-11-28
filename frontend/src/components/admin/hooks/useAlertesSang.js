@@ -1,6 +1,7 @@
 // Alertes de don de sang de tous les hôpitaux.
 import { useState } from "react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 export default function useAlertesSang({ token }) {
   // Don de sang global
@@ -15,7 +16,7 @@ export default function useAlertesSang({ token }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setAllAlertes(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     finally { setLoadingAlertes(false); }
   };
 

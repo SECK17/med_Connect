@@ -1,6 +1,7 @@
 // Hôpitaux : liste, statistiques, fiche détaillée, création/modification/suppression, admins d'hôpital.
 import { useState } from "react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 export default function useHopitaux({ token, showToast }) {
   // Hôpitaux
@@ -39,7 +40,7 @@ export default function useHopitaux({ token, showToast }) {
         data.forEach(s => { map[s.hopital_id] = s; });
         setHopitauxRdvStats(map);
       }
-    } catch {}
+    } catch (err) { signalerErreur(err); }
   };
 
   const fetchHopitaux = async () => {
@@ -48,7 +49,7 @@ export default function useHopitaux({ token, showToast }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setHopitaux(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
   };
 
   const selectHopital = async (hop) => {
@@ -69,7 +70,7 @@ export default function useHopitaux({ token, showToast }) {
       if (rMed.ok) setHopitalMedecins(await rMed.json());
       if (rPat.ok) setHopitalPatients(await rPat.json());
       if (rRdv.ok) setHopRdvStats(await rRdv.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setLoadingHop(false);
   };
 
@@ -125,7 +126,7 @@ export default function useHopitaux({ token, showToast }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setHopitalAdmins(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
   };
 
   const createAdminHop = async () => {

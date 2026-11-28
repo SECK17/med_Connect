@@ -21,25 +21,16 @@ export default function DossierMedical() {
   const [analyses, setAnalyses]           = useState([]);
   const [search, setSearch]               = useState("");
   const [openPrescId, setOpenPrescId]     = useState(null);
-  const [loading, setLoading]             = useState(true);
-  const [loadingAnalyses, setLoadingAnalyses] = useState(true);
+  const [loading, setLoading]             = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
+  const [loadingAnalyses, setLoadingAnalyses] = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId")));
   const [consultations, setConsultations]   = useState([]);
-  const [loadingCarnet, setLoadingCarnet]   = useState(true);
+  const [loadingCarnet, setLoadingCarnet]   = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId")));
   const [preview, setPreview]               = useState(null);
 
   const token  = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
   const etatPartages = usePartages({ userId, token });
   const { fetchPartages, fetchMedecins } = etatPartages;
-
-  useEffect(() => {
-    if (!token || !userId) { setLoading(false); setLoadingAnalyses(false); setLoadingCarnet(false); return; }
-    fetchOrdonnances();
-    fetchAnalyses();
-    fetchCarnet();
-    fetchPartages();
-    fetchMedecins();
-  }, []);
 
   const fetchOrdonnances = () => {
     fetch(`${API}/api/ordonnances/patient/${userId}`, {
@@ -91,6 +82,15 @@ export default function DossierMedical() {
       .catch(() => {})
       .finally(() => setLoadingAnalyses(false));
   };
+
+  useEffect(() => {
+    if (!token || !userId) return;
+    fetchOrdonnances();
+    fetchAnalyses();
+    fetchCarnet();
+    fetchPartages();
+    fetchMedecins();
+  }, []);
 
   const filteredPresc = prescriptions.filter(p =>
     p.doctorName.toLowerCase().includes(search.toLowerCase()) ||

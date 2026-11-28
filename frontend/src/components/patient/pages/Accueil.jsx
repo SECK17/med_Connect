@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Calendar, FileText, Stethoscope, Bell, ChevronRight,
-  Droplets, Users, Plus, FolderOpen, ChevronDown, ChevronUp,
+  Droplets, Users, Plus, FolderOpen, ChevronDown,
   Pill, Sparkles, Activity, Download, Heart, Shield,
 } from "lucide-react";
 import { API_URL } from "../../../config.js";
@@ -30,19 +30,16 @@ export default function Accueil() {
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const dateStr   = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 
-  const [appointments, setAppointments]   = useState([]);
+  const [appointments, setAppointments]   = useState(() => JSON.parse(localStorage.getItem("medconnect_appointments") || "[]"));
   const [prescriptions, setPrescriptions] = useState([]);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications] = useState(() => JSON.parse(localStorage.getItem("medconnect_notifications") || "[]"));
   const [donorCount, setDonorCount]       = useState(null);
-  const [loading, setLoading]             = useState(true);
+  const [loading, setLoading]             = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
   const [openOrd, setOpenOrd]             = useState(null);
 
   useEffect(() => {
     const token  = sessionStorage.getItem("token");
     const userId = sessionStorage.getItem("userId");
-
-    setNotifications(JSON.parse(localStorage.getItem("medconnect_notifications") || "[]"));
-    setAppointments(JSON.parse(localStorage.getItem("medconnect_appointments") || "[]"));
 
     if (token && userId) {
       fetch(`${API_URL}/api/rendezvous/patient/${userId}`, {
@@ -78,8 +75,6 @@ export default function Accueil() {
         .then(r => r.ok ? r.json() : null)
         .then(d => { if (d?.stats?.donorCount != null) setDonorCount(d.stats.donorCount); })
         .catch(() => {});
-    } else {
-      setLoading(false);
     }
   }, []);
 

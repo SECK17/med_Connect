@@ -171,7 +171,7 @@ export default function VueEnsemble({ adminNom, stats, loading, users, setSectio
               <h2 className="text-[14px] font-bold text-gray-900">Santé du système</h2>
             </div>
             <div className="px-5 py-3 space-y-3">
-              {HEALTH.map(({ label, icon: Icon, status }) => (
+              {HEALTH.map(({ label, icon: Icon }) => (
                 <div key={label} className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center">

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Building2, Star, ChevronDown, MapPin, Stethoscope, CalendarPlus, Users } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 const HOPITAUX_DAKAR = [
   "Hôpital Principal de Dakar",
@@ -38,16 +39,11 @@ export default function Medecins() {
   const [search, setSearch]       = useState("");
   const [spec, setSpec]           = useState("Tous");
   const [ville, setVille]         = useState("Toutes");
-  const [medecins, setMedecins]   = useState([]);
-  const [loading, setLoading]     = useState(true);
+  // Liste mise en cache sur cet appareil : affichée tout de suite, puis rafraîchie par l'API
+  const [medecins, setMedecins]   = useState(() => JSON.parse(localStorage.getItem("medconnect_doctors") || "null") || []);
+  const [loading, setLoading]     = useState(() => !localStorage.getItem("medconnect_doctors"));
   const [ouvert, setOuvert]       = useState(null); // hôpital ouvert
   const token = sessionStorage.getItem("token");
-
-  useEffect(() => {
-    const cached = JSON.parse(localStorage.getItem("medconnect_doctors") || "null");
-    if (cached) { setMedecins(cached); setLoading(false); }
-    fetchMedecins();
-  }, []);
 
   const fetchMedecins = async () => {
     try {
@@ -68,9 +64,14 @@ export default function Medecins() {
         localStorage.setItem("medconnect_doctors", JSON.stringify(mapped));
         setMedecins(mapped);
       }
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setLoading(false);
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
+    fetchMedecins();
+  }, []);
 
   // Hôpitaux filtrés par ville
   const hopitauxFiltres = HOPITAUX_DAKAR.filter(nom =>

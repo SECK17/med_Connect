@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Calendar, Clock, X, CheckCircle2, AlertCircle, Stethoscope, Building2, History, MessageSquare, Star } from "lucide-react";
+import { Calendar, Clock, X, CheckCircle2, AlertCircle, Building2, History, MessageSquare, Star } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 const STATUS_STYLE = {
   "En attente": { cls: "bg-amber-100 text-amber-800",     icon: AlertCircle,    iconCls: "text-amber-500"   },
@@ -10,12 +11,6 @@ const STATUS_STYLE = {
   "Confirmé":   { cls: "bg-emerald-100 text-emerald-800", icon: CheckCircle2,   iconCls: "text-emerald-500" },
   "Annulé":     { cls: "bg-red-100 text-red-800",         icon: X,              iconCls: "text-red-500"     },
 };
-
-const SPECIALITES = [
-  "Généraliste","Cardiologue","Dentiste","Gynécologue","Pédiatre",
-  "Dermatologue","Ophtalmologue","ORL","Neurologue","Pneumologue",
-  "Gastro-entérologue","Urologue","Psychiatre","Oncologue","Chirurgien",
-];
 
 const HEURES = [
   "08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30",
@@ -27,11 +22,12 @@ export default function RendezVous() {
   const navigate = useNavigate();
   const [tab, setTab]         = useState("liste");
   const [filtre, setFiltre]   = useState("tous"); // "tous" | "avenir" | "historique"
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState(() => JSON.parse(localStorage.getItem("medconnect_appointments") || "[]"));
   const [medecins, setMedecins] = useState([]);
   const [form, setForm] = useState({ medecinId: "", specialite: "", date: "", heure: "", type: "Présentiel", reason: "" });
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [erreurRdv, setErreurRdv] = useState(""); // refus du serveur ou panne réseau
+  const [loading, setLoading] = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
   const [evalModal, setEvalModal] = useState(null); // { doctorId, doctorName, rdvId }
   const [evalNote, setEvalNote]   = useState(0);
   const [evalSent, setEvalSent]   = useState(false);
@@ -40,39 +36,8 @@ export default function RendezVous() {
   const token = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("medconnect_appointments") || "[]");
-    setAppointments(saved);
-    fetchFromAPI();
-    fetchMedecins();
-    // Charger mes évaluations déjà soumises
-    if (token) {
-      fetch(`${API_URL}/api/evaluations/patient/moi`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.ok ? r.json() : [])
-        .then(data => {
-          const map = {};
-          data.forEach(e => { map[String(e.medecin_id)] = e.note; });
-          setMesEvals(map);
-        })
-        .catch(() => {});
-    }
-  }, []);
-
-  useEffect(() => {
-    if (location.state?.medecinId) {
-      setForm(f => ({ ...f, medecinId: String(location.state.medecinId) }));
-      setTab("nouveau");
-    } else if (location.state?.filtre) {
-      const map = { avenir: "avenir", historique: "passes", annules: "annules" };
-      setFiltre(map[location.state.filtre] || "tous");
-      setTab("liste");
-    }
-  }, [location.state]);
-
   const fetchFromAPI = async () => {
-    if (!token || !userId) { setLoading(false); return; }
+    if (!token || !userId) return;
     try {
       const res = await fetch(`${API_URL}/api/rendezvous/patient/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -118,7 +83,7 @@ export default function RendezVous() {
         localStorage.setItem("medconnect_appointments", JSON.stringify(mapped));
         setAppointments(mapped);
       }
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setLoading(false);
   };
 
@@ -128,11 +93,43 @@ export default function RendezVous() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) setMedecins(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
+    fetchFromAPI();
+    fetchMedecins();
+    // Charger mes évaluations déjà soumises
+    if (token) {
+      fetch(`${API_URL}/api/evaluations/patient/moi`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          const map = {};
+          data.forEach(e => { map[String(e.medecin_id)] = e.note; });
+          setMesEvals(map);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (location.state?.medecinId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- la page peut recevoir un nouveau médecin à pré-remplir sans être recréée
+      setForm(f => ({ ...f, medecinId: String(location.state.medecinId) }));
+      setTab("nouveau");
+    } else if (location.state?.filtre) {
+      const map = { avenir: "avenir", historique: "passes", annules: "annules" };
+      setFiltre(map[location.state.filtre] || "tous");
+      setTab("liste");
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErreurRdv("");
     const medecinChoisi = medecins.find(m => String(m.id) === form.medecinId);
     const newRdv = {
       id: Date.now().toString(),
@@ -157,11 +154,19 @@ export default function RendezVous() {
             date: form.date, heure: form.heure, motif: form.reason,
           }),
         });
-        if (res.ok) {
-          const created = await res.json();
-          newRdv.id = String(created.id);
+        if (!res.ok) {
+          // Refus du serveur (date passée, médecin indisponible…) : on n'ajoute pas de faux rendez-vous
+          const d = await res.json().catch(() => ({}));
+          setErreurRdv(d.message || "Le rendez-vous n'a pas pu être enregistré.");
+          return;
         }
-      } catch {}
+        const created = await res.json();
+        newRdv.id = String(created.id);
+      } catch (err) {
+        signalerErreur(err);
+        setErreurRdv("Le rendez-vous n'a pas pu être enregistré : le serveur est injoignable.");
+        return;
+      }
     }
 
     const updated = [newRdv, ...appointments];
@@ -199,7 +204,7 @@ export default function RendezVous() {
       setMesEvals(prev => ({ ...prev, [String(evalModal.doctorId)]: evalNote }));
       setEvalSent(true);
       setTimeout(() => { setEvalModal(null); setEvalNote(0); setEvalSent(false); }, 1500);
-    } catch {}
+    } catch (err) { signalerErreur(err); }
   };
 
   const today  = new Date(new Date().toDateString());
@@ -377,6 +382,13 @@ export default function RendezVous() {
                     </div>
                   ) : null;
                 })()}
+
+                {erreurRdv && (
+                  <div role="alert" className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-[13px] rounded-lg px-3 py-2.5">
+                    <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+                    <span>{erreurRdv}</span>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-1">
                   <button type="submit" className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">

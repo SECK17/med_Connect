@@ -7,9 +7,9 @@ import {
   MessageSquare, BellRing,
 } from "lucide-react";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
-import { API_URL } from "../../config.js";
 
 import { deconnexion } from "../../auth.js";
+import { compterNonLus } from "../../utils/messages.js";
 const NAV = [
   { to: "accueil",        label: "Tableau de bord",  icon: LayoutDashboard },
   { to: "demandes",       label: "Demandes RDV",      icon: CalendarDays    },
@@ -21,12 +21,88 @@ const NAV = [
   { to: "profil",         label: "Mon Profil",        icon: User            },
 ];
 
+// Menu latéral (bureau et mobile) : défini hors du composant principal pour ne pas être recréé à chaque rendu.
+function SidebarContent({ setMobile, fetchUnreadMsg, unreadMsg, initiales, nom, logout }) {
+  return (
+  <div className="flex flex-col h-full bg-white">
+
+    {/* Brand */}
+    <div className="px-5 py-5 flex items-center gap-3 border-b border-gray-100">
+      <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-200">
+        <Heart size={17} className="text-white" />
+      </div>
+      <div>
+        <div className="text-[15px] font-extrabold text-gray-900 tracking-tight">MedConnect</div>
+        <div className="text-[10px] text-blue-600 font-semibold">Espace Médecin</div>
+      </div>
+    </div>
+
+    {/* Nav */}
+    <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-2 mb-3">Menu</p>
+      {NAV.map(({ to, label, icon: Icon, badge }) => (
+        <NavLink
+          key={to}
+          to={to}
+          onClick={() => { setMobile(false); if (badge === "msg") fetchUnreadMsg(); }}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
+            ${isActive
+              ? "bg-blue-50 text-blue-700 border-l-[3px] border-blue-600"
+              : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors
+                ${isActive ? "bg-blue-100" : "bg-gray-100 group-hover:bg-gray-200"}`}
+              >
+                <Icon size={14} className={isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"} />
+              </div>
+              <span className="flex-1">{label}</span>
+              {badge === "msg" && unreadMsg > 0 && (
+                <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                  {unreadMsg}
+                </span>
+              )}
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+
+    {/* Footer */}
+    <div className="px-3 py-4 border-t border-gray-100">
+      <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+        <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0 shadow shadow-blue-200">
+          {initiales}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-bold text-gray-900 truncate">{nom}</div>
+          <div className="text-[10px] text-gray-400 flex items-center gap-1">
+            <Stethoscope size={9} /> Médecin
+          </div>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={logout}
+          title="Se déconnecter"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+        >
+          <LogOut size={14} />
+        </motion.button>
+      </div>
+    </div>
+  </div>
+  );
+}
+
 export default function MedecinLayout() {
   const navigate = useNavigate();
-  const [nom, setNom]       = useState("");
-  const [email, setEmail]   = useState("");
+  const [nom]              = useState(() => sessionStorage.getItem("nom") || "");
   const [mobile, setMobile] = useState(false);
-  const [notifs,     setNotifs]     = useState([]);
+  const [notifs,     setNotifs]     = useState(() => JSON.parse(localStorage.getItem("medconnect_medecin_notifications") || "[]")); // lues dès le premier affichage
   const [showNotifs, setShowNotifs] = useState(false);
   const [unreadMsg,  setUnreadMsg]  = useState(0);
 
@@ -38,25 +114,14 @@ export default function MedecinLayout() {
     setNotifs(saved);
   };
 
-  const fetchUnreadMsg = async () => {
-    const token = sessionStorage.getItem("token");
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/api/messages/unread/count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) { const d = await res.json(); setUnreadMsg(d.count); }
-    } catch {}
-  };
+  const majNonLus = (n) => { if (n !== null) setUnreadMsg(n); };
+  const fetchUnreadMsg = () => compterNonLus().then(majNonLus);
 
   useEffect(() => {
     const token = sessionStorage.getItem("token");
     const role  = sessionStorage.getItem("role");
     if (!token || role !== "medecin") { navigate("/login"); return; }
-    setNom(sessionStorage.getItem("nom")   || "");
-    setEmail(sessionStorage.getItem("email") || "");
-    loadNotifs();
-    fetchUnreadMsg();
+    compterNonLus().then(majNonLus);
   }, [navigate]);
 
   const markAllRead = () => {
@@ -72,80 +137,6 @@ export default function MedecinLayout() {
 
   const logout = async () => { await deconnexion(); navigate("/login"); };
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white">
-
-      {/* Brand */}
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-200">
-          <Heart size={17} className="text-white" />
-        </div>
-        <div>
-          <div className="text-[15px] font-extrabold text-gray-900 tracking-tight">MedConnect</div>
-          <div className="text-[10px] text-blue-600 font-semibold">Espace Médecin</div>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-2 mb-3">Menu</p>
-        {NAV.map(({ to, label, icon: Icon, badge }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={() => { setMobile(false); if (badge === "msg") fetchUnreadMsg(); }}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
-              ${isActive
-                ? "bg-blue-50 text-blue-700 border-l-[3px] border-blue-600"
-                : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors
-                  ${isActive ? "bg-blue-100" : "bg-gray-100 group-hover:bg-gray-200"}`}
-                >
-                  <Icon size={14} className={isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"} />
-                </div>
-                <span className="flex-1">{label}</span>
-                {badge === "msg" && unreadMsg > 0 && (
-                  <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                    {unreadMsg}
-                  </span>
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="px-3 py-4 border-t border-gray-100">
-        <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0 shadow shadow-blue-200">
-            {initiales}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-bold text-gray-900 truncate">{nom}</div>
-            <div className="text-[10px] text-gray-400 flex items-center gap-1">
-              <Stethoscope size={9} /> Médecin
-            </div>
-          </div>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={logout}
-            title="Se déconnecter"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-          >
-            <LogOut size={14} />
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -163,7 +154,7 @@ export default function MedecinLayout() {
 
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-[230px] bg-white border-r border-gray-200 z-50 shadow-sm">
-        <SidebarContent />
+        <SidebarContent setMobile={setMobile} fetchUnreadMsg={fetchUnreadMsg} unreadMsg={unreadMsg} initiales={initiales} nom={nom} logout={logout} />
       </aside>
 
       {/* Sidebar mobile */}
@@ -180,7 +171,7 @@ export default function MedecinLayout() {
             >
               <X size={14} />
             </button>
-            <SidebarContent />
+            <SidebarContent setMobile={setMobile} fetchUnreadMsg={fetchUnreadMsg} unreadMsg={unreadMsg} initiales={initiales} nom={nom} logout={logout} />
           </motion.aside>
         )}
       </AnimatePresence>

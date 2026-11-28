@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, Search, Droplets, Phone, Mail, MapPin } from "lucide-react";
+import { Users, Search, Mail, MapPin } from "lucide-react";
 import { API_URL } from "../../../config.js";
 
 const GROUPES = ["Tous","A+","A-","B+","B-","AB+","AB-","O+","O-"];

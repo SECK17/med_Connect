@@ -41,6 +41,7 @@ import AdminHopitalProfil   from "./components/adminHopital/pages/Profil.jsx";
 import AdminHopitalRDV      from "./components/adminHopital/pages/RendezVous.jsx";
 import AdminHopitalPatients from "./components/adminHopital/pages/Patients.jsx";
 import NotFound from "./components/NotFound.jsx";
+import BandeauErreur from "./components/BandeauErreur.jsx";
 
 // ─────────────────────────────────────────────
 // Guard pages publiques : redirige si déjà connecté
@@ -82,19 +83,6 @@ function PrivateRoute({ children, allowedRole }) {
 // ─────────────────────────────────────────────
 // Redirige vers le bon dashboard selon le rôle
 // ─────────────────────────────────────────────
-function RoleRedirect() {
-  const token = sessionStorage.getItem("token");
-  const role  = sessionStorage.getItem("role");
-
-  if (!token) return <Navigate to="/login" replace />;
-  if (role === "admin")         return <Navigate to="/dashboard" replace />;
-  if (role === "admin_hopital") return <Navigate to="/dashboard/admin-hopital/accueil" replace />;
-  if (role === "medecin")       return <Navigate to="/dashboard/medecin/accueil" replace />;
-  if (role === "patient")       return <Navigate to="/dashboard/patient/accueil" replace />;
-  if (role === "donneur")       return <Navigate to="/dashboard/donneur/accueil" replace />;
-  return <Navigate to="/login" replace />;
-}
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -200,6 +188,7 @@ export default function App() {
         {/* ── Catch-all ── */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <BandeauErreur />
     </BrowserRouter>
   );
 }

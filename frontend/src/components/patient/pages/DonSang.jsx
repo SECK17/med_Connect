@@ -5,6 +5,7 @@ import {
   CheckCircle2, ToggleLeft, ToggleRight, Star, ArrowRight, ArrowLeft, Phone, X,
 } from "lucide-react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 const URGENCY_STYLE = {
   "Critique": { cls: "bg-red-50 border-red-300",      badge: "bg-red-100 text-red-700",      icon: "text-red-600"    },
@@ -29,12 +30,11 @@ export default function DonSang() {
   const [alerts, setAlerts]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess]     = useState(false);
-  const [monStatut, setMonStatut] = useState(null);
+  const [monStatut, setMonStatut] = useState(() => JSON.parse(localStorage.getItem("medconnect_donor_profile") || "null"));
   const [contactModal, setContactModal] = useState(null);
   const [mesReponses, setMesReponses]   = useState(new Set());
 
   const token  = sessionStorage.getItem("token");
-  const userId = sessionStorage.getItem("userId");
 
   const profil    = JSON.parse(localStorage.getItem("medconnect_profile") || "{}");
   const monGroupe = profil.bloodGroup || "";
@@ -69,7 +69,6 @@ export default function DonSang() {
 
   useEffect(() => {
     const local = JSON.parse(localStorage.getItem("medconnect_donor_profile") || "null");
-    if (local) setMonStatut(local);
     const groupePat = local?.groupe || monGroupe;
 
     const load = async () => {
@@ -80,7 +79,7 @@ export default function DonSang() {
           .then(rep => setMesReponses(new Set(rep.map(r => r.alerte_id))))
           .catch(() => {});
         await fetchAlertesPatient(groupePat);
-      } catch {}
+      } catch (err) { signalerErreur(err); }
       setLoading(false);
     };
     load();

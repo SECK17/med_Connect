@@ -1,6 +1,7 @@
 // Demandes de changement d'hôpital des médecins : liste filtrée, validation, rejet.
 import { useState } from "react";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 export default function useDemandes({ token, showToast }) {
   // Demandes changement hôpital
@@ -18,7 +19,7 @@ export default function useDemandes({ token, showToast }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setDemandes(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     finally { setLoadingDemandes(false); }
   };
 

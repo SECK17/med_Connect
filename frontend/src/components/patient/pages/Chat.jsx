@@ -5,6 +5,7 @@ import { MessageSquare, Search } from "lucide-react";
 import { io } from "socket.io-client";
 import ChatWindow from "../../chat/ChatWindow";
 import { API_URL } from "../../../config.js";
+import { signalerErreur } from "../../../utils/erreurs.js";
 
 const SOCKET_URL = API_URL;
 
@@ -32,7 +33,7 @@ export default function Chat() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setConversations(await res.json());
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setLoading(false);
   };
 
@@ -56,10 +57,11 @@ export default function Chat() {
         });
         setRdvDoctors(Object.values(map));
       }
-    } catch {}
+    } catch (err) { signalerErreur(err); }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
     fetchConversations();
     fetchRdvDoctors();
 
@@ -72,6 +74,7 @@ export default function Chat() {
   // Ouvrir automatiquement si on arrive depuis un RDV
   useEffect(() => {
     if (location.state?.medecinId && location.state?.medecinNom) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- la page peut recevoir une nouvelle demande d'ouverture sans être recréée
       setSelected({
         interlocuteur_id: location.state.medecinId,
         nom:  location.state.medecinNom,

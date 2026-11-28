@@ -12,28 +12,12 @@ const ROLE_LABELS = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user] = useState(() => sessionStorage.getItem("token")
+    ? { role: sessionStorage.getItem("role"), nom: sessionStorage.getItem("nom") }
+    : null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isFirstAdmin, setIsFirstAdmin] = useState(false);
-
-  useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    const userRole = sessionStorage.getItem("role");
-    const userName = sessionStorage.getItem("nom");
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    setUser({ role: userRole, nom: userName });
-
-    // Load users if admin
-    if (userRole === "admin") {
-      fetchUsers();
-    }
-  }, [navigate]);
 
   const fetchUsers = async () => {
     try {
@@ -55,6 +39,22 @@ export default function Dashboard() {
       console.error("Erreur chargement utilisateurs:", err);
     }
   };
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    const userRole = sessionStorage.getItem("role");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    // Load users if admin
+    if (userRole === "admin") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
+      fetchUsers();
+    }
+  }, [navigate]);
 
   const handleLogout = async () => {
     await deconnexion();

@@ -1,38 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  User, Stethoscope, Building2, Phone, Mail, Hash, Save,
-  Pencil, Camera, Lock, CheckCircle2, AlertCircle, Loader2,
-  Upload, FileText, X, AlertTriangle,
-} from "lucide-react";
+import { Phone, Mail, Save, Pencil, Camera, Lock, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { API_URL } from "../../../config.js";
 import DeconnexionPartout from "../../DeconnexionPartout.jsx";
-
-const HOPITAUX = [
-  "Hôpital Principal de Dakar",
-  "CHU de Fann",
-  "Hôpital Aristide Le Dantec",
-  "Hôpital Général de Grand Yoff (HOGGY)",
-  "Hôpital de Pikine",
-  "Hôpital Abass Ndao",
-  "Hôpital Roi Baudouin (Guédiawaye)",
-  "Hôpital de Ouakam",
-  "Polyclinique SUMA",
-  "Clinique Pasteur",
-];
-
-const SPECIALITES = [
-  "Généraliste","Cardiologue","Dentiste","Gynécologue","Pédiatre",
-  "Dermatologue","Ophtalmologue","ORL","Neurologue","Pneumologue",
-  "Gastro-entérologue","Urologue","Psychiatre","Oncologue","Radiologue",
-  "Urgentiste","Endocrinologue","Rhumatologue","Néphrologue","Chirurgien",
-];
-
-const ANNEE_MIN = 1960;
-const ANNEE_MAX = new Date().getFullYear();
-
-const DEFAULT = { nom: "", email: "", telephone: "", specialite: "", numeroOrdre: "", anneeDebutPratique: "", hopital: "" };
-const INPUT_EDIT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+import { signalerErreur } from "../../../utils/erreurs.js";
+import { ANNEE_MIN, ANNEE_MAX, DEFAULT } from "./profil/constantes.js";
+import InfosGenerales from "./profil/InfosGenerales";
+import InfosMedicales from "./profil/InfosMedicales";
+import HopitalExercice from "./profil/HopitalExercice";
 
 export default function MedecinProfil() {
   const [profile, setProfile] = useState(DEFAULT);
@@ -43,7 +18,7 @@ export default function MedecinProfil() {
   const [saved,   setSaved]   = useState(false);
   const [savedMsg, setSavedMsg] = useState("Profil mis à jour avec succès !");
   const [error,   setError]   = useState("");
-  const [photo,   setPhoto]   = useState(null);
+  const [photo,   setPhoto]   = useState(() => localStorage.getItem("medconnect_medecin_photo") || null);
 
   // Changement d'hôpital
   const [hopitalPending,    setHopitalPending]    = useState(null);
@@ -80,7 +55,7 @@ export default function MedecinProfil() {
           setProfile(data);
           setDraft(data);
         }
-      } catch {}
+      } catch (err) { signalerErreur(err); }
 
       // Charger la demande en attente depuis le backend
       try {
@@ -91,13 +66,11 @@ export default function MedecinProfil() {
           const dem = await rDem.json();
           if (dem) setHopitalPending(dem);
         }
-      } catch {}
+      } catch (err) { signalerErreur(err); }
 
       setLoading(false);
     };
     load();
-    const savedPhoto = localStorage.getItem("medconnect_medecin_photo");
-    if (savedPhoto) setPhoto(savedPhoto);
   }, []);
 
   const calcExperience = (annee) => {
@@ -191,7 +164,7 @@ export default function MedecinProfil() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setHopitalPending(null);
   };
 
@@ -285,287 +258,13 @@ export default function MedecinProfil() {
       </div>
 
       {/* Informations générales */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-900 mb-4">
-          <User size={14} className="text-blue-600" /> Informations générales
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-          {/* Nom — modifiable */}
-          <div>
-            <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide block mb-1">Nom complet</label>
-            {edit ? (
-              <input type="text" value={p.nom} onChange={e => set("nom", e.target.value)} className={INPUT_EDIT} />
-            ) : (
-              <div className="text-[13px] text-gray-900 py-2 border-b border-gray-100">{p.nom || "—"}</div>
-            )}
-          </div>
-
-          {/* Téléphone — modifiable */}
-          <div>
-            <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide block mb-1">Téléphone</label>
-            {edit ? (
-              <input type="tel" value={p.telephone} onChange={e => set("telephone", e.target.value)} className={INPUT_EDIT} />
-            ) : (
-              <div className="flex items-center gap-2 text-[13px] text-gray-900 py-2 border-b border-gray-100">
-                <Phone size={12} className="text-gray-400" /> {p.telephone || "—"}
-              </div>
-            )}
-          </div>
-
-          {/* Email — toujours verrouillé */}
-          <div className="sm:col-span-2">
-            <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-1">
-              Email <Lock size={9} className="text-gray-300" />
-            </label>
-            {edit ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
-                <Mail size={12} className="text-gray-400 flex-shrink-0" />
-                <span className="flex-1 text-[13px] text-gray-600">{p.email || "—"}</span>
-                <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded font-medium">Non modifiable</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-[13px] text-gray-900 py-2 border-b border-gray-100">
-                <Mail size={12} className="text-gray-400" /> {p.email || "—"}
-              </div>
-            )}
-          </div>
-
-        </div>
-      </div>
+      <InfosGenerales edit={edit} p={p} set={set} />
 
       {/* Informations médicales */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-900 mb-4">
-          <Stethoscope size={14} className="text-blue-600" /> Informations médicales
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-          {/* Spécialité — verrouillée une fois définie */}
-          <div className="sm:col-span-2">
-            <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-1">
-              Spécialité {profile.specialite && <Lock size={9} className="text-gray-300" />}
-            </label>
-            {edit ? (
-              profile.specialite ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
-                  <Stethoscope size={12} className="text-gray-400 flex-shrink-0" />
-                  <span className="flex-1 text-[13px] text-gray-700">{profile.specialite}</span>
-                  <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded font-medium">Non modifiable</span>
-                </div>
-              ) : (
-                <select value={p.specialite} onChange={e => set("specialite", e.target.value)} className={INPUT_EDIT}>
-                  <option value="">Choisir une spécialité</option>
-                  {SPECIALITES.map(s => <option key={s}>{s}</option>)}
-                </select>
-              )
-            ) : (
-              <div className="flex items-center gap-2 text-[13px] text-gray-900 py-2 border-b border-gray-100">
-                <Stethoscope size={12} className="text-gray-400" /> {p.specialite || "—"}
-              </div>
-            )}
-          </div>
-
-          {/* Numéro d'ordre — verrouillé une fois défini */}
-          <div>
-            <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-1">
-              Numéro d'ordre {profile.numeroOrdre && <Lock size={9} className="text-gray-300" />}
-            </label>
-            {edit ? (
-              profile.numeroOrdre ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
-                  <Hash size={12} className="text-gray-400 flex-shrink-0" />
-                  <span className="flex-1 text-[13px] text-gray-700">{profile.numeroOrdre}</span>
-                  <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded font-medium">Non modifiable</span>
-                </div>
-              ) : (
-                <input value={p.numeroOrdre} onChange={e => set("numeroOrdre", e.target.value)} placeholder="SN-XXXXX" className={INPUT_EDIT} />
-              )
-            ) : (
-              <div className="flex items-center gap-2 text-[13px] text-gray-900 py-2 border-b border-gray-100">
-                <Hash size={12} className="text-gray-400" /> {p.numeroOrdre || "—"}
-              </div>
-            )}
-          </div>
-
-          {/* Année de début de pratique — verrouillée une fois définie */}
-          <div>
-            <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-1">
-              Année de début de pratique {profile.anneeDebutPratique && <Lock size={9} className="text-gray-300" />}
-            </label>
-            {edit ? (
-              profile.anneeDebutPratique ? (
-                <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg">
-                  <div className="flex-1">
-                    <div className="text-[13px] text-gray-700 font-semibold">Depuis {ANNEE_MAX - parseInt(profile.anneeDebutPratique)} · {profile.anneeDebutPratique} ans de pratique</div>
-                  </div>
-                  <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded font-medium flex-shrink-0">Non modifiable</span>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <input
-                    type="number"
-                    min={ANNEE_MIN}
-                    max={ANNEE_MAX}
-                    value={p.anneeDebutPratique}
-                    onChange={e => set("anneeDebutPratique", e.target.value)}
-                    placeholder={`Ex: ${ANNEE_MAX - 10}`}
-                    className={INPUT_EDIT}
-                  />
-                  <p className="text-[10px] text-amber-600">⚠ Une fois définie, cette année ne pourra plus être modifiée</p>
-                </div>
-              )
-            ) : (
-              <div className="text-[13px] text-gray-900 py-2 border-b border-gray-100">
-                {p.anneeDebutPratique
-                  ? `Depuis ${ANNEE_MAX - parseInt(p.anneeDebutPratique)} · ${p.anneeDebutPratique} ans de pratique`
-                  : "—"}
-              </div>
-            )}
-          </div>
-
-        </div>
-      </div>
+      <InfosMedicales profile={profile} edit={edit} p={p} set={set} />
 
       {/* Hôpital d'exercice */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-900 mb-4">
-          <Building2 size={14} className="text-blue-600" /> Hôpital d'exercice
-        </div>
-
-        {/* Demande en attente */}
-        {hopitalPending && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2"
-          >
-            <div className="flex items-center gap-2 text-[13px] font-semibold text-amber-800">
-              <AlertTriangle size={14} className="text-amber-500" /> Demande en attente de validation
-            </div>
-            <div className="text-[12px] text-amber-700">
-              Changement demandé vers : <strong>{hopitalPending.hopitalDemande}</strong>
-            </div>
-            <div className="text-[11px] text-amber-600">
-              Justificatif : {hopitalPending.justificatif} · Soumis le {new Date(hopitalPending.date).toLocaleDateString("fr-FR")}
-            </div>
-            <button
-              onClick={annulerDemandeHopital}
-              className="text-[11px] text-red-500 hover:text-red-700 underline"
-            >
-              Annuler la demande
-            </button>
-          </motion.div>
-        )}
-
-        {/* Hôpital actuel */}
-        <div>
-          <label className="text-[12px] font-medium text-gray-500 uppercase tracking-wide block mb-1">Hôpital / Clinique actuel</label>
-
-          {/* Mode lecture ou édition sans hôpital défini */}
-          {!edit && (
-            <div className="flex items-center gap-2 text-[13px] text-gray-900 py-2 border-b border-gray-100">
-              <Building2 size={12} className="text-gray-400" /> {p.hopital || "—"}
-            </div>
-          )}
-
-          {/* Mode édition — premier hôpital (pas encore défini) */}
-          {edit && !profile.hopital && (
-            <>
-              <select value={p.hopital} onChange={e => set("hopital", e.target.value)} className={INPUT_EDIT}>
-                <option value="">Choisir un hôpital</option>
-                {HOPITAUX.map(h => <option key={h}>{h}</option>)}
-              </select>
-              <p className="text-[11px] text-gray-400 mt-1.5">Visible par les patients sur votre fiche.</p>
-            </>
-          )}
-
-          {/* Mode édition — hôpital déjà défini → demande de changement */}
-          {edit && profile.hopital && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-lg">
-                <Building2 size={12} className="text-gray-400 flex-shrink-0" />
-                <span className="flex-1 text-[13px] text-gray-700">{profile.hopital}</span>
-                {hopitalPending
-                  ? <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded font-medium flex-shrink-0">En attente</span>
-                  : <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded font-medium flex-shrink-0">Actuel</span>
-                }
-              </div>
-
-              {!hopitalPending && !showHopitalChange && (
-                <button
-                  onClick={() => setShowHopitalChange(true)}
-                  className="text-[12px] text-blue-600 hover:text-blue-800 font-semibold underline"
-                >
-                  Demander un changement d'hôpital →
-                </button>
-              )}
-
-              {/* Formulaire demande de changement */}
-              <AnimatePresence>
-                {showHopitalChange && !hopitalPending && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="bg-blue-50 border border-blue-200 rounded-xl overflow-hidden"
-                  >
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-bold text-blue-800">Demande de changement d'hôpital</span>
-                        <button onClick={() => { setShowHopitalChange(false); setNewHopital(""); setHopitalFile(null); setHopitalFileName(""); }}
-                          className="text-blue-400 hover:text-blue-600"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide block mb-1">Nouvel hôpital</label>
-                        <select value={newHopital} onChange={e => setNewHopital(e.target.value)} className={INPUT_EDIT + " bg-white"}>
-                          <option value="">Choisir…</option>
-                          {HOPITAUX.filter(h => h !== profile.hopital).map(h => <option key={h}>{h}</option>)}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide block mb-1">
-                          Justificatif <span className="text-red-500">*</span>
-                        </label>
-                        <div
-                          onClick={() => hopitalFileRef.current.click()}
-                          className="border-2 border-dashed border-blue-200 rounded-xl p-3 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-100 transition-colors"
-                        >
-                          {hopitalFileName ? (
-                            <div className="flex items-center gap-2 justify-center text-[12px] text-blue-700">
-                              <FileText size={14} /> {hopitalFileName}
-                            </div>
-                          ) : (
-                            <div className="text-[12px] text-blue-500">
-                              <Upload size={18} className="mx-auto mb-1 text-blue-400" />
-                              Lettre d'affectation, contrat ou attestation
-                            </div>
-                          )}
-                        </div>
-                        <input ref={hopitalFileRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={onHopitalFile} />
-                      </div>
-
-                      <button
-                        onClick={submitHopitalChange}
-                        disabled={savingHopital || !newHopital || !hopitalFile}
-                        className="w-full h-9 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
-                      >
-                        {savingHopital ? "Envoi…" : <><Upload size={13} /> Soumettre la demande</>}
-                      </button>
-                      <p className="text-[10px] text-blue-500 text-center">
-                        Le changement sera effectif après validation par l'administration.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      </div>
+      <HopitalExercice hopitalPending={hopitalPending} annulerDemandeHopital={annulerDemandeHopital} edit={edit} p={p} profile={profile} set={set} showHopitalChange={showHopitalChange} setShowHopitalChange={setShowHopitalChange} setNewHopital={setNewHopital} setHopitalFile={setHopitalFile} setHopitalFileName={setHopitalFileName} newHopital={newHopital} hopitalFileRef={hopitalFileRef} hopitalFileName={hopitalFileName} onHopitalFile={onHopitalFile} submitHopitalChange={submitHopitalChange} savingHopital={savingHopital} hopitalFile={hopitalFile} />
 
       {/* Boutons save/cancel */}
       <AnimatePresence>
@@ -601,7 +300,6 @@ export default function MedecinProfil() {
           </button>
         </div>
       </div>
-
 
       {/* Déconnexion de tous les appareils */}
       <DeconnexionPartout />

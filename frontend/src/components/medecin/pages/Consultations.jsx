@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ClipboardList, Plus, Search, X, CheckCircle2, User, CalendarDays } from "lucide-react";
+import { ClipboardList, Plus, Search, X, CheckCircle2, CalendarDays } from "lucide-react";
 import { API_URL } from "../../../config.js";
 
 const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white";
@@ -18,18 +18,17 @@ export default function MedecinConsultations() {
   const token  = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
 
+  // recuperer…() fait la requête sans toucher à l'état : utilisable tel quel au montage.
+  const recupererConsultations = () => fetch(`${API_URL}/api/consultations/medecin/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(r => r.ok ? r.json() : []);
   const load = () => {
     setLoading(true);
-    fetch(`${API_URL}/api/consultations/medecin/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : [])
-      .then(setConsultations)
-      .finally(() => setLoading(false));
+    recupererConsultations().then(setConsultations).finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    load();
+    recupererConsultations().then(setConsultations).finally(() => setLoading(false));
     fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })

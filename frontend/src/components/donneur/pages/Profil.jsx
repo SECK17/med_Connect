@@ -8,7 +8,7 @@ export default function DonneurProfil() {
   const [profil,    setProfil]    = useState(null);
   const [userInfo,  setUserInfo]  = useState(null);
   const [dispo,     setDispo]     = useState(true);
-  const [loading,   setLoading]   = useState(true);
+  const [loading,   setLoading]   = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
   const [saved,     setSaved]     = useState(false);
   const [gpsStatus, setGpsStatus] = useState(null); // null | 'loading' | 'ok' | 'error'
   const [coords,    setCoords]    = useState(null);
@@ -19,7 +19,7 @@ export default function DonneurProfil() {
   const email  = sessionStorage.getItem("email") || "";
 
   useEffect(() => {
-    if (!token || !userId) { setLoading(false); return; }
+    if (!token || !userId) return;
     fetch(`${API_URL}/api/patients/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })

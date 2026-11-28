@@ -11,17 +11,18 @@ export default function AdminHopitalMedecins() {
   const [acting,   setActing]   = useState(null);
   const token = sessionStorage.getItem("token");
 
+  // recuperer…() fait la requête sans toucher à l'état : utilisable tel quel au montage.
+  const recupererMedecins = () => fetch(`${API_URL}/api/admin-hopital/medecins`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(r => r.ok ? r.json() : []);
   const load = () => {
     setLoading(true);
-    fetch(`${API_URL}/api/admin-hopital/medecins`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : [])
-      .then(setMedecins)
-      .finally(() => setLoading(false));
+    recupererMedecins().then(setMedecins).finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    recupererMedecins().then(setMedecins).finally(() => setLoading(false));
+  }, []);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });

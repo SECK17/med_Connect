@@ -12,32 +12,23 @@ const DEFAULT_PROFILE = {
 const BLOOD_GROUPS = ["A+","A-","B+","B-","AB+","AB-","O+","O-"];
 
 export default function Profil() {
-  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  // Profil enregistré sur cet appareil, sinon valeurs de la session (complétées ensuite par l'API)
+  const [profile, setProfile] = useState(() => JSON.parse(localStorage.getItem("medconnect_profile") || "null") || {
+    ...DEFAULT_PROFILE,
+    name:  sessionStorage.getItem("nom")   || "",
+    email: sessionStorage.getItem("email") || "",
+    phone: sessionStorage.getItem("tel")   || "",
+  });
   const [edit, setEdit] = useState(false);
   const [draft, setDraft] = useState(DEFAULT_PROFILE);
   const [saved, setSaved] = useState(false);
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState(() => localStorage.getItem("medconnect_profile_photo") || null);
   const [tagInputs, setTagInputs] = useState({ allergies: "", antecedents: "", treatments: "", vaccinations: "" });
   const fileRef = useRef();
   const token = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("medconnect_profile") || "null");
-    if (saved) {
-      setProfile(saved);
-    } else {
-      const p = {
-        ...DEFAULT_PROFILE,
-        name:  sessionStorage.getItem("nom")   || "",
-        email: sessionStorage.getItem("email") || "",
-        phone: sessionStorage.getItem("tel")   || "",
-      };
-      setProfile(p);
-    }
-    const savedPhoto = localStorage.getItem("medconnect_profile_photo");
-    if (savedPhoto) setPhoto(savedPhoto);
-
     if (token && userId) {
       fetch(`${API_URL}/api/patients/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },

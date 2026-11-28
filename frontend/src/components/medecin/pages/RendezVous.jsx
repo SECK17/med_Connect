@@ -13,7 +13,7 @@ import ModaleDossier from "./rendezVous/ModaleDossier";
 
 export default function MedecinRendezVous() {
   const [rdvs,    setRdvs]    = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
   const [filter,  setFilter]  = useState("confirme");
   const [search,  setSearch]  = useState("");
   const [view,    setView]    = useState("liste"); // "liste" | "agenda"
@@ -26,7 +26,7 @@ export default function MedecinRendezVous() {
   const userId = sessionStorage.getItem("userId");
 
   useEffect(() => {
-    if (!token || !userId) { setLoading(false); return; }
+    if (!token || !userId) return;
     fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })

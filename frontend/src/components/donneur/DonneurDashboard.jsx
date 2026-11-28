@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { deconnexion } from "../../auth.js";
@@ -14,14 +14,77 @@ const NAV = [
   { to: "profil",   icon: User,            label: "Mon profil"      },
 ];
 
+// Menu latéral (bureau et mobile) : défini hors du composant principal pour ne pas être recréé à chaque rendu.
+function SidebarContent({ setMobile, initiales, nom, logout }) {
+  return (
+  <div className="flex flex-col h-full bg-red-500 border-r border-red-400">
+
+    {/* Brand */}
+    <div className="px-5 py-5 flex items-center gap-3 border-b border-white/20">
+      <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-md shadow-red-900/20">
+        <Heart size={17} className="text-white" />
+      </div>
+      <div>
+        <div className="text-[14px] font-extrabold text-white tracking-tight">MedConnect</div>
+        <div className="text-[10px] text-white/60 font-semibold">Espace Donneur</div>
+      </div>
+    </div>
+
+    {/* Nav */}
+    <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 px-2 mb-3">Menu</p>
+      {NAV.map(({ to, label, icon: Icon }) => (
+        <NavLink key={to} to={to} onClick={() => setMobile(false)}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
+            ${isActive
+              ? "bg-white/15 text-white border-l-[3px] border-white"
+              : "text-white/70 hover:bg-white/10 hover:text-white"
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                isActive ? "bg-white/25" : "bg-white/10 group-hover:bg-white/20"
+              }`}>
+                <Icon size={14} className={isActive ? "text-white" : "text-white/60 group-hover:text-white"} />
+              </div>
+              <span>{label}</span>
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+
+    {/* Footer profil */}
+    <div className="px-3 py-4 border-t border-white/20">
+      <div className="flex items-center gap-3 bg-white/10 rounded-xl px-3 py-2.5">
+        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0">
+          {initiales}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-bold text-white truncate">{nom}</div>
+          <div className="text-[10px] text-white/50">Donneur</div>
+        </div>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={logout}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          <LogOut size={14} />
+        </motion.button>
+      </div>
+    </div>
+  </div>
+  );
+}
+
 export default function DonneurLayout() {
   const navigate = useNavigate();
   const [mobile,     setMobile]     = useState(false);
-  const [notifs,     setNotifs]     = useState([]);
+  const [notifs,     setNotifs]     = useState(() => JSON.parse(localStorage.getItem("medconnect_donneur_notifications") || "[]")); // lues dès le premier affichage
   const [showNotifs, setShowNotifs] = useState(false);
 
   const nom      = sessionStorage.getItem("nom")   || "Donneur";
-  const email    = sessionStorage.getItem("email") || "";
   const initiales = nom.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   const logout = async () => { await deconnexion(); navigate("/login"); };
@@ -40,70 +103,9 @@ export default function DonneurLayout() {
     setNotifs([]);
   };
 
-  useEffect(() => { loadNotifs(); }, []);
   const notifCount = notifs.filter(n => !n.read).length;
 
   /* ── Sidebar (inverse admin hôpital : colorée au lieu de blanche) ── */
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-red-500 border-r border-red-400">
-
-      {/* Brand */}
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-white/20">
-        <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-md shadow-red-900/20">
-          <Heart size={17} className="text-white" />
-        </div>
-        <div>
-          <div className="text-[14px] font-extrabold text-white tracking-tight">MedConnect</div>
-          <div className="text-[10px] text-white/60 font-semibold">Espace Donneur</div>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 px-2 mb-3">Menu</p>
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} onClick={() => setMobile(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all group
-              ${isActive
-                ? "bg-white/15 text-white border-l-[3px] border-white"
-                : "text-white/70 hover:bg-white/10 hover:text-white"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  isActive ? "bg-white/25" : "bg-white/10 group-hover:bg-white/20"
-                }`}>
-                  <Icon size={14} className={isActive ? "text-white" : "text-white/60 group-hover:text-white"} />
-                </div>
-                <span>{label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Footer profil */}
-      <div className="px-3 py-4 border-t border-white/20">
-        <div className="flex items-center gap-3 bg-white/10 rounded-xl px-3 py-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0">
-            {initiales}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-bold text-white truncate">{nom}</div>
-            <div className="text-[10px] text-white/50">Donneur</div>
-          </div>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={logout}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-white transition-colors"
-          >
-            <LogOut size={14} />
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -120,7 +122,7 @@ export default function DonneurLayout() {
 
       {/* Sidebar desktop */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-[230px] z-50 shadow-sm">
-        <SidebarContent />
+        <SidebarContent setMobile={setMobile} initiales={initiales} nom={nom} logout={logout} />
       </aside>
 
       {/* Sidebar mobile */}
@@ -134,7 +136,7 @@ export default function DonneurLayout() {
               className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-white/20 text-white flex items-center justify-center">
               <X size={14} />
             </button>
-            <SidebarContent />
+            <SidebarContent setMobile={setMobile} initiales={initiales} nom={nom} logout={logout} />
           </motion.aside>
         )}
       </AnimatePresence>

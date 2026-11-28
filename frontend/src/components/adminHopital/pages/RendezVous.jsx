@@ -19,41 +19,45 @@ export default function AdminHopitalRendezVous() {
   const [toast,   setToast]   = useState(null);
   const token = sessionStorage.getItem("token");
 
+  // recuperer…() fait la requête sans toucher à l'état : utilisable tel quel au montage.
+  const recupererRdvs = () => fetch(`${API_URL}/api/admin-hopital/rendez-vous`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(r => r.ok ? r.json() : []);
+
+  // Mise à jour de la liste + notifications de la secrétaire si un médecin a répondu à un transfert
+  const appliquerRdvs = (data) => {
+    // Détection changement de statut après transfert → notifications secrétaire
+    const seen = JSON.parse(localStorage.getItem("medconnect_secretaire_rdv_seen") || "{}");
+    const newNotifs = [];
+    data.forEach(r => {
+      const prev = seen[String(r.id)];
+      const cur  = r.statut;
+      if (prev === "transfere" && cur !== prev) {
+        const doc     = r.medecin?.nom || "le médecin";
+        const patient = r.patient?.nom || "le patient";
+        if (cur === "confirme") {
+          newNotifs.push({ title: "RDV confirmé par le médecin", message: `Dr. ${doc} a confirmé le RDV de ${patient}.`, type: "success", date: new Date().toISOString(), read: false });
+        } else if (cur === "annule") {
+          newNotifs.push({ title: "RDV refusé par le médecin", message: `Dr. ${doc} a annulé le RDV de ${patient}.`, type: "error", date: new Date().toISOString(), read: false });
+        }
+      }
+      seen[String(r.id)] = cur;
+    });
+    localStorage.setItem("medconnect_secretaire_rdv_seen", JSON.stringify(seen));
+    if (newNotifs.length > 0) {
+      const existing = JSON.parse(localStorage.getItem("medconnect_secretaire_notifications") || "[]");
+      localStorage.setItem("medconnect_secretaire_notifications", JSON.stringify([...newNotifs, ...existing]));
+    }
+    setRdvs(data);
+  };
   const load = () => {
     setLoading(true);
-    fetch(`${API_URL}/api/admin-hopital/rendez-vous`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        // Détection changement de statut après transfert → notifications secrétaire
-        const seen = JSON.parse(localStorage.getItem("medconnect_secretaire_rdv_seen") || "{}");
-        const newNotifs = [];
-        data.forEach(r => {
-          const prev = seen[String(r.id)];
-          const cur  = r.statut;
-          if (prev === "transfere" && cur !== prev) {
-            const doc     = r.medecin?.nom || "le médecin";
-            const patient = r.patient?.nom || "le patient";
-            if (cur === "confirme") {
-              newNotifs.push({ title: "RDV confirmé par le médecin", message: `Dr. ${doc} a confirmé le RDV de ${patient}.`, type: "success", date: new Date().toISOString(), read: false });
-            } else if (cur === "annule") {
-              newNotifs.push({ title: "RDV refusé par le médecin", message: `Dr. ${doc} a annulé le RDV de ${patient}.`, type: "error", date: new Date().toISOString(), read: false });
-            }
-          }
-          seen[String(r.id)] = cur;
-        });
-        localStorage.setItem("medconnect_secretaire_rdv_seen", JSON.stringify(seen));
-        if (newNotifs.length > 0) {
-          const existing = JSON.parse(localStorage.getItem("medconnect_secretaire_notifications") || "[]");
-          localStorage.setItem("medconnect_secretaire_notifications", JSON.stringify([...newNotifs, ...existing]));
-        }
-        setRdvs(data);
-      })
-      .finally(() => setLoading(false));
+    recupererRdvs().then(appliquerRdvs).finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    recupererRdvs().then(appliquerRdvs).finally(() => setLoading(false));
+  }, []);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -106,7 +110,6 @@ export default function AdminHopitalRendezVous() {
     annule:     rdvs.filter(r => r.statut === "annule").length,
   };
 
-  const fmtDate = d => d ? new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
   return (
     <div className="space-y-5">

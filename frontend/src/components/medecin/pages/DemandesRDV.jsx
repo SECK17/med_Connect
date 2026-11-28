@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { User, Mail, Phone, Droplets, FileText, CalendarDays, CheckCircle2, XCircle, X, Bell } from "lucide-react";
+import { User, Mail, Phone, Droplets, FileText, CalendarDays, CheckCircle2, XCircle, X } from "lucide-react";
 import { API_URL } from "../../../config.js";
 
 const STATUT_BADGE = {
@@ -13,7 +13,7 @@ const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] fo
 
 export default function DemandesRDV() {
   const [demandes, setDemandes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
   const [selectedRdv, setSelectedRdv] = useState(null);
   const [form, setForm] = useState({ date: "", heure: "" });
   const [motifModal, setMotifModal] = useState(null);
@@ -34,15 +34,8 @@ export default function DemandesRDV() {
   const token = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
 
-  useEffect(() => {
-    fetchDemandes();
-  }, []);
-
   const fetchDemandes = async () => {
-    if (!token || !userId) {
-      setLoading(false);
-      return;
-    }
+    if (!token || !userId) return;
 
     try {
       const res = await fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, {
@@ -77,6 +70,11 @@ export default function DemandesRDV() {
     }
   };
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
+    fetchDemandes();
+  }, []);
+
   const handleValider = async (rdvId) => {
     if (!form.date || !form.heure) {
       showToast("Veuillez sélectionner une date et une heure", "error");
@@ -96,6 +94,7 @@ export default function DemandesRDV() {
 
       if (res.ok) {
         pushNotifMedecin({
+          // eslint-disable-next-line react-hooks/purity -- appelé au clic sur « Valider », pas pendant le rendu
           id: Date.now().toString(),
           type: "success",
           title: "Rendez-vous confirmé",
@@ -108,7 +107,7 @@ export default function DemandesRDV() {
         setForm({ date: "", heure: "" });
         fetchDemandes();
       }
-    } catch (err) {
+    } catch {
       showToast("Erreur lors de la validation", "error");
     }
   };
@@ -137,7 +136,7 @@ export default function DemandesRDV() {
         setSelectedRdv(null);
         fetchDemandes();
       }
-    } catch (err) {
+    } catch {
       showToast("Erreur lors du refus", "error");
     }
   };

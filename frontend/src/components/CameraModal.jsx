@@ -4,17 +4,11 @@ import { Camera, X, RotateCcw, Check } from "lucide-react";
 
 export default function CameraModal({ isOpen, onCapture, onClose }) {
   const videoRef = useRef(null);
-  const [stream,      setStream]      = useState(null);
+  const [,           setStream]      = useState(null); // seul le setter sert (arrêt de la caméra)
   const [captured,    setCaptured]    = useState(null); // { blob, url }
   const [facingMode,  setFacingMode]  = useState("environment");
   const [error,       setError]       = useState(null);
   const [loading,     setLoading]     = useState(false);
-
-  useEffect(() => {
-    if (isOpen) startCamera();
-    else         stopStream();
-    return () => stopStream();
-  }, [isOpen, facingMode]); // eslint-disable-line
 
   const startCamera = async () => {
     setError(null);
@@ -43,6 +37,13 @@ export default function CameraModal({ isOpen, onCapture, onClose }) {
       return null;
     });
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronisation avec un système externe (la caméra)
+    if (isOpen) startCamera();
+    else         stopStream();
+    return () => stopStream();
+  }, [isOpen, facingMode]); // eslint-disable-line
 
   const capturePhoto = () => {
     const video = videoRef.current;

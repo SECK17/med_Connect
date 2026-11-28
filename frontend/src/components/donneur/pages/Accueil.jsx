@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Droplets, Bell, Heart, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { Droplets, Bell, Heart, CheckCircle2, ArrowRight } from "lucide-react";
 import { API_URL } from "../../../config.js";
 
 const COMPATIBILITE = {

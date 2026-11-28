@@ -9,6 +9,27 @@ import { API_URL } from "../../../config.js";
 
 const PAR_PAGE = 20;
 
+// Couleurs de l'espace : bleu (patient) ou rouge (donneur). Pour le donneur, les accès autorisés
+// restent neutres, afin que les accès refusés (en rouge) ressortent toujours.
+const THEMES = {
+  patient: {
+    titre: "text-blue-600",
+    filtreActif: "bg-blue-50 border-blue-500 text-blue-700 font-medium",
+    bordure: "border-l-blue-400",
+    icone: "bg-blue-50 text-blue-600",
+    pastille: "bg-blue-50 text-blue-700",
+    bouton: "text-blue-600 border-blue-200 hover:bg-blue-50",
+  },
+  donneur: {
+    titre: "text-red-500",
+    filtreActif: "bg-red-50 border-red-500 text-red-700 font-medium",
+    bordure: "border-l-slate-300",
+    icone: "bg-slate-100 text-slate-600",
+    pastille: "bg-slate-100 text-slate-700",
+    bouton: "text-red-600 border-red-200 hover:bg-red-50",
+  },
+};
+
 const ROLES = {
   medecin: "Médecin",
   admin: "Administrateur",
@@ -108,6 +129,7 @@ export default function JournalAcces() {
   const [filtre, setFiltre]   = useState("tous");
 
   const userId = parseInt(sessionStorage.getItem("userId"), 10);
+  const theme = THEMES[sessionStorage.getItem("role")] || THEMES.patient;
 
   // Mise à jour de l'état après réception d'une page (jamais appelée de façon synchrone)
   const appliquer = useCallback(({ p, data, pages: nbPages, total: nb }) => {
@@ -136,7 +158,7 @@ export default function JournalAcces() {
     <div className="space-y-5">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-[22px] font-bold text-gray-900 tracking-tight flex items-center gap-2">
-          <ShieldCheck size={20} className="text-blue-600" /> Accès à mon dossier
+          <ShieldCheck size={20} className={theme.titre} /> Accès à mon dossier
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           Chaque consultation de votre dossier médical par un soignant ou un administrateur est enregistrée ici.
@@ -151,7 +173,7 @@ export default function JournalAcces() {
             onClick={() => setFiltre(cle)}
             className={`text-[12px] px-3 py-1 rounded-full border transition-colors ${
               filtre === cle
-                ? "bg-blue-50 border-blue-500 text-blue-700 font-medium"
+                ? theme.filtreActif
                 : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
             }`}
           >
@@ -177,11 +199,11 @@ export default function JournalAcces() {
             <div
               key={e.id}
               className={`bg-white border border-gray-200 border-l-4 rounded-xl p-4 flex items-start gap-3 ${
-                e.autorise ? "border-l-blue-400" : "border-l-red-400"
+                e.autorise ? theme.bordure : "border-l-red-400"
               }`}
             >
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                e.autorise ? "bg-blue-50 text-blue-600" : "bg-red-50 text-red-600"
+                e.autorise ? theme.icone : "bg-red-50 text-red-600"
               }`}>
                 <Icone size={17} />
               </div>
@@ -194,7 +216,7 @@ export default function JournalAcces() {
                     </span>
                   )}
                   {e.nb > 1 && (
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${theme.pastille}`}>
                       {e.nb} fois
                     </span>
                   )}
@@ -217,7 +239,7 @@ export default function JournalAcces() {
         {!loading && page < pages && (
           <button
             onClick={plusAnciens}
-            className="w-full text-[13px] text-blue-600 border border-blue-200 hover:bg-blue-50 py-2 rounded-xl transition-colors"
+            className={`w-full text-[13px] border py-2 rounded-xl transition-colors ${theme.bouton}`}
           >
             Afficher les accès plus anciens
           </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Users, Bell, Building2, Droplets, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
+import { Users, Bell, Building2, Droplets, CheckCircle2, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { API_URL } from "../../../config.js";
 

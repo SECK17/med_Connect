@@ -3,51 +3,31 @@ import CameraModal from "../../CameraModal";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import {
-  CalendarDays, Users, Clock, Droplets, Phone, User, FilePlus,
-  FlaskConical, Plus, Trash2, X, CheckCircle2, Camera, Upload,
-  FileText, Image, ClipboardList, ArrowRight, Stethoscope, TrendingUp,
+  CalendarDays, Users, Clock, Droplets, FilePlus, FlaskConical, Plus, CheckCircle2, ClipboardList, ArrowRight, Stethoscope, TrendingUp,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { API_URL } from "../../../config.js";
-
-const INPUT = "w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+import { signalerErreur } from "../../../utils/erreurs.js";
+import useModaleOrdonnance from "./rendezVous/useModaleOrdonnance";
+import useModaleAnalyse from "./rendezVous/useModaleAnalyse";
+import ModaleOrdonnance from "./rendezVous/ModaleOrdonnance";
+import ModaleAnalyse from "./rendezVous/ModaleAnalyse";
 
 export default function MedecinAccueil() {
   const navigate = useNavigate();
   const [stats, setStats]           = useState({ rendezvous: 0, patients: 0, today: 0, avenir: 0, consultations: 0 });
   const [rendezvous, setRendezvous] = useState([]);
   const [consultations, setConsultations] = useState([]);
-  const [loading, setLoading]       = useState(true);
-
-  // Modal ordonnance
-  const [prescModal, setPrescModal] = useState(null); // { patientId, patientNom }
-  const [prescMode, setPrescMode]   = useState("photo"); // "photo" | "texte"
-  const [prescFile, setPrescFile]   = useState(null);
-  const [prescPreview, setPrescPreview] = useState(null);
-  const [meds, setMeds]   = useState([{ nom: "", dosage: "", duree: "" }]);
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving]   = useState(false);
-
-  // Modal analyse
-  const [analyseModal, setAnalyseModal] = useState(null); // { patientId, patientNom }
-  const [analyseFile, setAnalyseFile]   = useState(null);
-  const [analysePreview, setAnalysePreview] = useState(null);
-  const [analyseNotes, setAnalyseNotes]     = useState("");
-  const [savingAnalyse, setSavingAnalyse]   = useState(false);
+  const [loading, setLoading]       = useState(() => Boolean(sessionStorage.getItem("token") && sessionStorage.getItem("userId"))); // rien à charger si personne n'est connecté
 
   const [toast, setToast] = useState(null);
-  const [showPrescCam,   setShowPrescCam]   = useState(false);
-  const [showAnalyseCam, setShowAnalyseCam] = useState(false);
-
 
   const token  = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
   const nom    = sessionStorage.getItem("nom") || "Docteur";
 
-  useEffect(() => { fetchMedecinData(); }, []);
-
   const fetchMedecinData = async () => {
-    if (!token || !userId) { setLoading(false); return; }
+    if (!token || !userId) return;
     try {
       const [rdvRes, consultRes] = await Promise.all([
         fetch(`${API_URL}/api/rendezvous/medecin/${userId}`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -65,118 +45,23 @@ export default function MedecinAccueil() {
         avenir:       rdvData.filter(r => r.statut === "confirme" && r.date_rdv?.split("T")[0] >= today).length,
         consultations: consultData.length,
       });
-    } catch {}
+    } catch (err) { signalerErreur(err); }
     setLoading(false);
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fonction asynchrone : l'état n'est modifié qu'après la réponse de l'API
+  useEffect(() => { fetchMedecinData(); }, []);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
 
-  /* ── Ordonnance ─────────────────────────────────── */
-  const openPresc = (rdv) => {
-    const u = rdv.patient?.user || {};
-    setPrescModal({ patientId: rdv.patient_id, patientNom: u.nom || "Patient" });
-    setPrescMode("photo");
-    setPrescFile(null); setPrescPreview(null);
-    setMeds([{ nom: "", dosage: "", duree: "" }]);
-    setNotes("");
-  };
-
-  const onPrescFile = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    setPrescFile(f);
-    if (f.type.startsWith("image/")) setPrescPreview(URL.createObjectURL(f));
-    else setPrescPreview(null);
-  };
-
-  const submitPhotoPresc = async () => {
-    if (!prescFile) return showToast("Sélectionnez une photo", "error");
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append("fichier", prescFile);
-      fd.append("patient_id", prescModal.patientId);
-      if (notes.trim()) fd.append("notes", notes.trim());
-
-      const res = await fetch(`${API_URL}/api/ordonnances/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      if (!res.ok) throw new Error();
-      showToast(`Ordonnance envoyée à ${prescModal.patientNom}`);
-      setPrescModal(null);
-    } catch {
-      showToast("Erreur lors de l'envoi", "error");
-    } finally { setSaving(false); }
-  };
-
-  const addMed    = () => setMeds(m => [...m, { nom: "", dosage: "", duree: "" }]);
-  const removeMed = (i) => setMeds(m => m.filter((_, idx) => idx !== i));
-  const updateMed = (i, key, val) => setMeds(m => m.map((med, idx) => idx === i ? { ...med, [key]: val } : med));
-
-  const submitTextPresc = async () => {
-    const valid = meds.filter(m => m.nom.trim());
-    if (!valid.length) return showToast("Ajoutez au moins un médicament", "error");
-    setSaving(true);
-    try {
-      const res = await fetch(`${API_URL}/api/ordonnances`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          patient_id: prescModal.patientId,
-          medicaments: valid,
-          notes: notes.trim() || null,
-          date: new Date().toISOString().split("T")[0],
-        }),
-      });
-      if (!res.ok) throw new Error();
-      showToast(`Ordonnance envoyée à ${prescModal.patientNom}`);
-      setPrescModal(null);
-    } catch {
-      showToast("Erreur lors de l'envoi", "error");
-    } finally { setSaving(false); }
-  };
-
-  /* ── Analyse ────────────────────────────────────── */
-  const openAnalyse = (rdv) => {
-    const u = rdv.patient?.user || {};
-    setAnalyseModal({ patientId: rdv.patient_id, patientNom: u.nom || "Patient" });
-    setAnalyseFile(null); setAnalysePreview(null); setAnalyseNotes("");
-  };
-
-  const onAnalyseFile = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    setAnalyseFile(f);
-    if (f.type.startsWith("image/")) setAnalysePreview(URL.createObjectURL(f));
-    else setAnalysePreview(null);
-  };
-
-  const submitAnalyse = async () => {
-    if (!analyseFile) return showToast("Sélectionnez une photo", "error");
-    setSavingAnalyse(true);
-    try {
-      const fd = new FormData();
-      fd.append("fichier", analyseFile);
-      fd.append("patient_id", analyseModal.patientId);
-      if (analyseNotes.trim()) fd.append("notes", analyseNotes.trim());
-
-      const res = await fetch(`${API_URL}/api/analyses/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      if (!res.ok) throw new Error();
-      showToast(`Résultat envoyé à ${analyseModal.patientNom}`);
-      setAnalyseModal(null);
-    } catch {
-      showToast("Erreur lors de l'envoi", "error");
-    } finally { setSavingAnalyse(false); }
-  };
+  // Fenêtres « Nouvelle ordonnance » et « Nouvelle analyse » : mêmes hooks que la page Rendez-vous
+  const etatOrdonnance = useModaleOrdonnance({ showToast, token });
+  const { openPresc, showPrescCam, setShowPrescCam, setPrescFile, setPrescPreview } = etatOrdonnance;
+  const etatAnalyse = useModaleAnalyse({ showToast, token });
+  const { openAnalyse, showAnalyseCam, setShowAnalyseCam, setAnalyseFile, setAnalysePreview } = etatAnalyse;
 
   /* ── UI ─────────────────────────────────────────── */
   return (
@@ -446,239 +331,10 @@ export default function MedecinAccueil() {
         </div>
       )}
 
-      {/* ── Modal Ordonnance ── */}
-      <AnimatePresence>
-        {prescModal && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-40" onClick={() => setPrescModal(null)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            >
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                  <div>
-                    <div className="text-[15px] font-bold text-gray-900">Nouvelle ordonnance</div>
-                    <div className="text-[12px] text-gray-500">Pour : {prescModal.patientNom}</div>
-                  </div>
-                  <button onClick={() => setPrescModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-                    <X size={16} />
-                  </button>
-                </div>
+      {/* ── Fenêtres ordonnance / analyse (partagées avec la page Rendez-vous) ── */}
+      <ModaleOrdonnance {...etatOrdonnance} />
+      <ModaleAnalyse {...etatAnalyse} />
 
-                {/* Mode tabs */}
-                <div className="flex border-b border-gray-100 px-6">
-                  {[["photo", Camera, "Photo"], ["texte", FileText, "Texte"]].map(([k, Icon, l]) => (
-                    <button key={k} onClick={() => setPrescMode(k)}
-                      className={`flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
-                        prescMode === k ? "text-blue-600 border-blue-600" : "text-gray-400 border-transparent hover:text-gray-700"
-                      }`}
-                    >
-                      <Icon size={13} /> {l}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Corps */}
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                  {prescMode === "photo" ? (
-                    <>
-                      {/* Zone upload photo */}
-                      <label htmlFor="presc-file-input"
-                        className="block border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                      >
-                        {prescPreview ? (
-                          <img src={prescPreview} alt="aperçu" className="max-h-52 mx-auto rounded-lg object-contain" />
-                        ) : prescFile ? (
-                          <div className="flex flex-col items-center gap-2">
-                            <FileText size={40} className="text-blue-400" />
-                            <div className="text-[13px] font-medium text-gray-700">{prescFile.name}</div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto">
-                              <Upload size={22} className="text-blue-500" />
-                            </div>
-                            <div className="text-[13px] font-medium text-gray-700">Choisir un fichier</div>
-                            <div className="text-[11px] text-gray-400">JPG, PNG ou PDF · Max 10 Mo</div>
-                          </div>
-                        )}
-                      </label>
-                      <input id="presc-file-input" type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf" onChange={onPrescFile} />
-                      {!prescFile && (
-                        <>
-                          <p className="text-center text-[11px] text-gray-400">— ou —</p>
-                          <button type="button"
-                            onClick={() => setShowPrescCam(true)}
-                            className="flex items-center justify-center gap-2 py-2.5 w-full border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[13px] font-semibold rounded-xl transition-colors"
-                          >
-                            <Camera size={14} /> Prendre une photo
-                          </button>
-                        </>
-                      )}
-                      {prescFile && (
-                        <button onClick={() => { setPrescFile(null); setPrescPreview(null); }}
-                          className="text-[12px] text-red-400 hover:text-red-600 flex items-center gap-1"
-                        >
-                          <X size={11} /> Supprimer
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-[13px] font-semibold text-gray-700">Médicaments *</label>
-                          <button onClick={addMed}
-                            className="flex items-center gap-1 text-[11px] text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors"
-                          >
-                            <Plus size={11} /> Ajouter
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {meds.map((m, i) => (
-                            <div key={i} className="flex gap-2 items-start">
-                              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                <input value={m.nom}    onChange={e => updateMed(i, "nom", e.target.value)}
-                                  placeholder="Médicament" className={INPUT} />
-                                <input value={m.dosage} onChange={e => updateMed(i, "dosage", e.target.value)}
-                                  placeholder="Dosage" className={INPUT} />
-                                <input value={m.duree}  onChange={e => updateMed(i, "duree", e.target.value)}
-                                  placeholder="Durée" className={INPUT} />
-                              </div>
-                              {meds.length > 1 && (
-                                <button onClick={() => removeMed(i)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg mt-0.5">
-                                  <Trash2 size={13} />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Notes (commun aux deux modes) */}
-                  <div>
-                    <label className="text-[13px] font-semibold text-gray-700 block mb-1.5">Notes / Conseils</label>
-                    <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                      placeholder="Instructions particulières, contre-indications…"
-                      rows={2} className={`${INPUT} resize-none`}
-                    />
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
-                  <button
-                    onClick={prescMode === "photo" ? submitPhotoPresc : submitTextPresc}
-                    disabled={saving}
-                    className="flex-1 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold rounded-xl text-[13px] transition-colors flex items-center justify-center gap-2"
-                  >
-                    {saving ? "Envoi…" : <><Upload size={14} /> Envoyer l'ordonnance</>}
-                  </button>
-                  <button onClick={() => setPrescModal(null)}
-                    className="px-5 h-10 border border-gray-200 text-gray-600 rounded-xl text-[13px] hover:bg-gray-50 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Modal Analyse ── */}
-      <AnimatePresence>
-        {analyseModal && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-40" onClick={() => setAnalyseModal(null)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            >
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                  <div>
-                    <div className="text-[15px] font-bold text-gray-900">Résultat d'analyse</div>
-                    <div className="text-[12px] text-gray-500">Pour : {analyseModal.patientNom}</div>
-                  </div>
-                  <button onClick={() => setAnalyseModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                  <label htmlFor="analyse-file-input"
-                    className="block border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors"
-                  >
-                    {analysePreview ? (
-                      <img src={analysePreview} alt="aperçu" className="max-h-52 mx-auto rounded-lg object-contain" />
-                    ) : analyseFile ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <FileText size={40} className="text-purple-400" />
-                        <div className="text-[13px] font-medium text-gray-700">{analyseFile.name}</div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mx-auto">
-                          <Upload size={22} className="text-purple-500" />
-                        </div>
-                        <div className="text-[13px] font-medium text-gray-700">Choisir un fichier</div>
-                        <div className="text-[11px] text-gray-400">JPG, PNG ou PDF · Max 10 Mo</div>
-                      </div>
-                    )}
-                  </label>
-                  <input id="analyse-file-input" type="file" className="hidden" accept=".jpg,.jpeg,.png,.pdf" onChange={onAnalyseFile} />
-                  {!analyseFile && (
-                    <>
-                      <p className="text-center text-[11px] text-gray-400">— ou —</p>
-                      <button type="button"
-                        onClick={() => setShowAnalyseCam(true)}
-                        className="flex items-center justify-center gap-2 py-2.5 w-full border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[13px] font-semibold rounded-xl transition-colors"
-                      >
-                        <Camera size={14} /> Prendre une photo
-                      </button>
-                    </>
-                  )}
-                  {analyseFile && (
-                    <button onClick={() => { setAnalyseFile(null); setAnalysePreview(null); }}
-                      className="text-[12px] text-red-400 hover:text-red-600 flex items-center gap-1"
-                    >
-                      <X size={11} /> Supprimer
-                    </button>
-                  )}
-
-                  <div>
-                    <label className="text-[13px] font-semibold text-gray-700 block mb-1.5">Notes / Commentaires</label>
-                    <textarea value={analyseNotes} onChange={e => setAnalyseNotes(e.target.value)}
-                      placeholder="Interprétation, recommandations…"
-                      rows={2} className={`${INPUT} resize-none`}
-                    />
-                  </div>
-                </div>
-
-                <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
-                  <button onClick={submitAnalyse} disabled={savingAnalyse}
-                    className="flex-1 h-10 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold rounded-xl text-[13px] transition-colors flex items-center justify-center gap-2"
-                  >
-                    {savingAnalyse ? "Envoi…" : <><Upload size={14} /> Envoyer le résultat</>}
-                  </button>
-                  <button onClick={() => setAnalyseModal(null)}
-                    className="px-5 h-10 border border-gray-200 text-gray-600 rounded-xl text-[13px] hover:bg-gray-50 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
       {/* ── Caméras ── */}
       <CameraModal
         isOpen={showPrescCam}

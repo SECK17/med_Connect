@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bell, Plus, Droplets, X, CheckCircle2, Trash2, Loader2, AlertTriangle, Navigation, Users, Phone, Mail } from "lucide-react";
+import { Bell, Plus, Droplets, X, CheckCircle2, Trash2, Loader2, AlertTriangle, Navigation, Users, Phone } from "lucide-react";
 import { API_URL } from "../../../config.js";
 
 const GROUPES  = ["A+","A-","B+","B-","AB+","AB-","O+","O-"];
@@ -84,14 +84,15 @@ export default function AdminHopitalAlertes() {
     });
   };
 
+  // recuperer…() fait la requête sans toucher à l'état : utilisable tel quel au montage.
+  const recupererAlertes = () => api("/api/alertes-sang/moi").then(r => r.ok ? r.json() : []);
   const load = () => {
     setLoading(true);
-    api("/api/alertes-sang/moi")
-      .then(r => r.ok ? r.json() : [])
-      .then(setAlertes)
-      .finally(() => setLoading(false));
+    recupererAlertes().then(setAlertes).finally(() => setLoading(false));
   };
-  useEffect(load, []);
+  useEffect(() => {
+    recupererAlertes().then(setAlertes).finally(() => setLoading(false));
+  }, []);
 
   const openForm = () => {
     setShowForm(true);
