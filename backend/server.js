@@ -23,6 +23,7 @@ const corsOptions = {
 // Base de données
 // ──────────────────────────
 const { connectDB } = require('./src/config/db');
+const { verifierSecrets } = require('./src/config/verifierSecrets');
 require('./src/models/index'); // enregistre les modèles et leurs relations
 const { migrer, etat: etatMigrations } = require('./src/db/migrations');
 const { verifierSchema } = require('./src/db/verifierSchema');
@@ -200,6 +201,9 @@ const PORT = process.env.PORT || 5000;
 
 const start = async () => {
   try {
+    // 0. Secrets (JWT_SECRET, ADMIN_CODE) : refus de démarrer s'ils sont absents ou faibles en production
+    verifierSecrets();
+
     // 1. Connexion à la base de données
     await connectDB();
     console.log('✅ Base de données connectée');

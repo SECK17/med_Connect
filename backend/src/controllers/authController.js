@@ -1,4 +1,5 @@
 // controllers/authController.js
+const crypto  = require("crypto");
 const bcrypt  = require("bcryptjs");
 // Hash d'un mot de passe quelconque : comparé quand l'email est inconnu (temps de réponse identique)
 const HASH_FACTICE = bcrypt.hashSync("medconnect-compte-inexistant", 10);
@@ -12,6 +13,18 @@ const { ouvrirSession, revoquerTout } = tokens;
 const { sendBienvenue, sendResetPassword, sendVerificationEmail } = require("../services/emailService");
 
 const ROLES_INSCRIPTION = ["patient", "donneur", "medecin"];
+
+// Clé du verrou PostgreSQL pris pendant la création du premier admin
+const VERROU_PREMIER_ADMIN = 4815162342;
+
+// Comparaison en temps constant : la durée de la réponse ne renseigne pas sur le code
+const codeAdminValide = (code) => {
+  const attendu = process.env.ADMIN_CODE;
+  if (!code || !attendu) return false;
+  const a = crypto.createHash("sha256").update(String(code)).digest();
+  const b = crypto.createHash("sha256").update(attendu).digest();
+  return crypto.timingSafeEqual(a, b);
+};
 
 // Clé distincte de JWT_SECRET : un lien de vérification ne peut pas servir de jeton de connexion.
 const VERIFY_SECRET = () => `${process.env.JWT_SECRET}:verify-email`;
@@ -309,23 +322,31 @@ const createFirstAdmin = async (req, res) => {
       return res.status(400).json({ message: "Champs obligatoires manquants." });
     }
 
-    if (!adminCode || adminCode !== process.env.ADMIN_CODE) {
+    if (!codeAdminValide(adminCode)) {
       return res.status(403).json({ message: "Code administrateur invalide." });
     }
 
-    const userExists = await trouverParEmail(email);
-    if (userExists) {
+    // Cette route ne sert qu'à créer le tout premier admin. Ensuite, un admin en crée
+    // d'autres avec POST /api/auth/create-admin. Le verrou de transaction empêche deux
+    // demandes simultanées de créer chacune un « premier » admin.
+    const resultat = await sequelize.transaction(async (transaction) => {
+      await sequelize.query("SELECT pg_advisory_xact_lock(:cle)", {
+        replacements: { cle: VERROU_PREMIER_ADMIN }, transaction,
+      });
+      if (await User.count({ where: { role: "admin" }, transaction })) return { refus: 403 };
+      if (await trouverParEmail(email)) return { refus: 400 };
+      return { user: await User.create({ nom, email, password, telephone, role: "admin" }, { transaction }) };
+    });
+
+    if (resultat.refus === 403) {
+      return res.status(403).json({
+        message: "Un administrateur existe déjà. Demandez-lui de vous créer un compte.",
+      });
+    }
+    if (resultat.refus === 400) {
       return res.status(400).json({ message: "Cet email est déjà utilisé." });
     }
-
-    // Créer le compte admin
-    const user = await User.create({
-      nom,
-      email,
-      password,
-      telephone,
-      role: "admin",
-    });
+    const { user } = resultat;
 
     console.log("✅ Admin créé id:", user.id);
 

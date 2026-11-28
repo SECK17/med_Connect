@@ -45,6 +45,8 @@ node --test tests/auth.test.js
 | `migrations.test.js` | Migrations : base neuve, base existante créée par l'ancien sync (données conservées, schéma identique), verrou entre serveurs, nouvelle migration et annulation, détection d'un modèle modifié sans migration |
 | `journal.test.js` | Journal d'accès aux dossiers : traçage des lectures, créations, suppressions, téléchargements et refus ; consultation par le patient et l'admin ; journal non modifiable ; purge |
 | `pagination-securite.test.js` | Pagination optionnelle, notes des médecins, CORS, helmet, erreurs JSON |
+| `premier-admin.test.js` | Le code administrateur ne crée que le tout premier admin, une seule fois, même avec des demandes simultanées |
+| `secrets.test.js` | Refus de démarrer avec un `JWT_SECRET` absent, ou en production avec un secret trop court ou laissé à sa valeur d'exemple (sans base de données) |
 
 ## Écrire un nouveau test
 
