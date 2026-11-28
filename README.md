@@ -95,6 +95,7 @@ est commentée dans [backend/.env.example](backend/.env.example).
 | `frontend` | `npm run dev` | Serveur de développement Vite |
 | `frontend` | `npm run build` | Construction de production (`dist/`) |
 | `frontend` | `npm run lint` | ESLint |
+| `frontend` | `npm test` | Tests du frontend (Vitest) |
 
 ## Structure du projet
 
@@ -198,6 +199,8 @@ Toutes les routes sont sous `/api` et, sauf l'authentification, exigent l'en-tê
 
 ## Tests
 
+### Backend
+
 Les tests d'intégration tournent sur une vraie base PostgreSQL, `medconnect_test`. Elle est
 créée automatiquement avec les identifiants de `backend/.env`, puis **vidée** à chaque
 exécution ; son nom doit contenir « test » (garde-fou).
@@ -210,6 +213,22 @@ npm test
 Ils couvrent notamment l'authentification, les règles d'accès aux dossiers, les fichiers,
 la messagerie, les sessions, la validation, le journal d'accès, les migrations et le
 fonctionnement derrière un proxy. Le détail est dans [backend/tests/README.md](backend/tests/README.md).
+
+### Frontend
+
+Les tests du frontend (Vitest et Testing Library, dans un navigateur simulé) ne demandent ni
+serveur ni base de données : les appels à l'API sont simulés.
+
+```bash
+cd frontend
+npm test            # une fois
+npm run test:watch  # en continu pendant le développement
+```
+
+Ils couvrent la session (renouvellement automatique du jeton, déconnexion), le signalement
+des erreurs réseau, la prise de rendez-vous (un refus du serveur n'affiche jamais de faux
+succès), la déconnexion de tous les appareils, la page « Accès à mon dossier » et le journal
+de l'administrateur. Les fichiers de test sont à côté du code (`*.test.js`, `*.test.jsx`).
 
 ## Base de données et migrations
 
