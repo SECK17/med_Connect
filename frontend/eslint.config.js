@@ -18,4 +18,11 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  // Service worker (notifications push) : il tourne hors de la page, avec ses propres globales
+  {
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
 ])
